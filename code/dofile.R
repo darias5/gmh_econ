@@ -449,7 +449,72 @@ world_map %>% filter(cause_id == mental_disorder_cause_id) %>%
        fill="% of deaths, total ") +
   scale_fill_distiller(palette = "RdYlBu", limits = c(0,max(100*world_map$par[world_map$cause_id== mental_disorder_cause_id]))) 
 
+# Pulling together deaths
 
+
+# Subset of data
+data_gh <- data %>%
+  filter(cause_id == "294") %>% #Filters to all causes; data_gh$val == total burden by location id
+  filter(metric_id == "1") %>%  #Filters to numeric metric
+  filter(measure_id == "1") %>%  #Filters to deaths
+  select(c(1, 14:18, 22:25)) 
+
+data_prev_mh <- data_prev %>% filter(cause_id == mental_disorder_cause_id) %>% unique()
+data_gh <- full_join(data_prev_mh, data_gh, by = "iso_code")%>% 
+  select(iso_code, population, val, attrib_deaths, par, location_id, mh_value_agg_rev, mh_value_agg)  %>% filter(population != 1) %>%
+  unique() 
+data_gh$mh_val_walker <- data_gh$attrib_deaths
+
+data_gh <- data_gh %>% rename("Revised - Vigo et al. method" = mh_value_agg_rev, "Original GBD method" = mh_value_agg, "Revised - Walker et al. method" = mh_val_walker) %>% select(!c(attrib_deaths))
+data_gh_long <- data_gh %>% gather("estimate", "number", "Revised - Walker et al. method":"Revised - Vigo et al. method") %>% select(!c(par, location_id))
+
+data_gh_long$rate_100k <- data_gh_long$number/data_gh_long$population
+data_gh_long$percent <- data_gh_long$number/data_gh_long$val*100
+
+world_map = map_data("world")
+world_map_crosswalk <-  read.csv(file = file.path(datapath,"worldmap_crossover.csv"))
+world_map <- inner_join(world_map, world_map_crosswalk, by = "region")
+world_map <- world_map %>% filter(iso_code != "..") %>% select(!(c(6)))
+
+rm(world_map_crosswalk)
+world_map <- inner_join(data_gh_long, world_map, by = "iso_code") %>% rename("deaths" = number, "deaths_total" = val)
+rm(data_gh, data_gh_long)
+
+# Rates
+
+caption <- "Source: Global Burden of Disease Study, Vigo et al. 2016, Walker et al. 2015"
+
+world_map %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = rate_100k), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Deaths due to mental disorders per 100,000",
+       subtitle="2019",
+       caption=caption,
+       fill="Deaths") +
+  scale_fill_distiller(palette = "RdYlBu", limits = c(0,max(world_map$rate))) +
+  facet_grid(~estimate)
+
+world_map %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = percent), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Deaths due to mental disorders, % of deaths",
+       subtitle="2019",
+       caption=caption,
+       fill="% of deaths") +
+  scale_fill_viridis(option = "plasma", 
+                     limits=c(0, 20), 
+                     oob=squish) +
+    facet_grid(~estimate)
 
 ## To Do
 # Walker alternative -- use percent attributable risk to calculate 
