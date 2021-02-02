@@ -346,6 +346,110 @@ world_map %>% filter(measure_id== "4") %>%
   scale_fill_distiller(palette = "RdYlBu", limits = c(0,max(world_map$percent[world_map$measure_id== "4"]))) +
   facet_grid(~estimate)
 
+############################
+##  WALKER ET AL METHOD  ##
+############################
+
+
+
+# Loading IHME Global Burden of Disease Data
+data_prev <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-prev.csv"))
+
+# Adding alpha-3 codes from ISO 3166-1 (i.e., World Bank Codes)
+ihme_crosswalk <- read_excel(path = file.path(datapath, "ihme_crosswalk.xlsx")) %>% 
+  select(-c("location_name"))
+
+data_prev <- left_join(data_prev, ihme_crosswalk, by = "location_id")
+
+# clean up
+rm(ihme_crosswalk) 
+
+# Adding World Bank income classifications
+income_level <- read_excel(path = file.path(datapath, "OGHIST.xls"), sheet = 2) %>% 
+  select(-(c(2:34))) %>% 
+  rename("income_level" = "2019")
+
+data_prev <- left_join(data_prev, income_level, by = "iso_code")
+
+# clean up
+rm(income_level) 
+
+# Adding population
+data_pop <- data %>% ungroup %>% filter(cause_id==294 & measure_id == 1 & metric_id == 1) %>% select(population, iso_code) %>%  filter(population != 1)  %>% unique()
+data_prev <- left_join(data_prev, data_pop, by = "iso_code") %>%  filter(population != 1)  %>% unique()
+rm(data_pop) 
+
+# Adding total all cause mortality
+
+data_deaths <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-deaths.csv"))
+data_deaths <- data_deaths %>% rename("deaths" = val) %>% select (location_id, deaths)
+data_prev <- left_join(data_prev, data_deaths, by = "location_id")
+rm(data_deaths)
+
+# source: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4461039/
+# Due to the distributive property of the Population Attributable Fraction, a category-specific attribution fraction is estimated
+# using the formula from Rockhill et al, 1998:https://pubmed.ncbi.nlm.nih.gov/9584027/  
+PAR <- function(RR, prev){
+  attrib_risk <-   
+    prev *
+    ((RR - 1) /    RR)
+  return(attrib_risk)
+}
+
+PAR(2.22, 0.194)
+PAR(1.86,.106)
+PAR(1.43,.143)
+PAR(2.54,.0104)
+
+mental_disorder_cause_id <- 558
+schizophrenia_cause_id <- 559
+depressive_cause_id <- 567
+bipolar_cause_id <- 570
+anxiety_cause_id <- 571 
+
+relative_risk <- data.frame(
+  c(mental_disorder_cause_id,
+    schizophrenia_cause_id,
+    depressive_cause_id,
+    bipolar_cause_id,
+    anxiety_cause_id),
+  c(2.22,
+    2.54,
+    1.71,
+    2,
+    1.43)
+)
+colnames(relative_risk) <- c("cause_id", "rel_risk")
+
+data_prev <- inner_join(data_prev, relative_risk, by = "cause_id")
+data_prev$par <-     data_prev$val  * ((data_prev$rel_risk - 1) /    data_prev$rel_risk)
+
+data_prev$attrib_deaths <- data_prev$par * data_prev$deaths
+
+world_map = map_data("world")
+world_map_crosswalk <-  read.csv(file = file.path(datapath,"worldmap_crossover.csv"))
+world_map <- inner_join(world_map, world_map_crosswalk, by = "region")
+world_map <- world_map %>% filter(iso_code != "..") %>% select(!(c(6)))
+
+rm(world_map_crosswalk)
+data_prev <- data_prev  %>% select(iso_code, cause_id, measure_id, attrib_deaths, par)
+world_map <- inner_join(world_map, data_prev, by = "iso_code") 
+
+world_map %>% filter(cause_id == mental_disorder_cause_id) %>%
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = par*100), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Percent of deaths attributable to mental disorders",
+       subtitle="2019",
+       caption=caption,
+       fill="% of deaths, total ") +
+  scale_fill_distiller(palette = "RdYlBu", limits = c(0,max(100*world_map$par[world_map$cause_id== mental_disorder_cause_id]))) 
+
+
 
 ## To Do
 # Walker alternative -- use percent attributable risk to calculate 
