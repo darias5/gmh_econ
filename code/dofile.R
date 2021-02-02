@@ -21,6 +21,8 @@ library(tidyr)
 library(ggplot2)
 library(RColorBrewer)
 library(maps)
+library(scales)
+library(viridis)
 
 
 ######################
@@ -495,8 +497,10 @@ world_map %>%
   labs(title="Deaths due to mental disorders per 100,000",
        subtitle="2019",
        caption=caption,
-       fill="Deaths") +
-  scale_fill_distiller(palette = "RdYlBu", limits = c(0,max(world_map$rate))) +
+       fill="Deaths, total")  +
+  scale_fill_viridis(option = "viridis", 
+                     limits=c(0, 250), 
+                     oob=squish) +
   facet_grid(~estimate)
 
 world_map %>% 
@@ -510,19 +514,79 @@ world_map %>%
   labs(title="Deaths due to mental disorders, % of deaths",
        subtitle="2019",
        caption=caption,
-       fill="% of deaths") +
+       fill="% of deaths ") +
   scale_fill_viridis(option = "plasma", 
                      limits=c(0, 20), 
                      oob=squish) +
     facet_grid(~estimate)
 
-## To Do
-# Walker alternative -- use percent attributable risk to calculate 
+
+# VSL
+
+vsl_2006 <- 7400000 # Source:https://www.epa.gov/sites/production/files/2017-08/documents/ee-0568-50.pdf
+gdp_deflator_2019 <- 107.494 # Source: https://data.worldbank.org/indicator/NY.GDP.DEFL.ZS?locations=US
+gdp_deflator_2006 <- 86.01
+vsl_2019 <- vsl_2006 * gdp_deflator_2019 / gdp_deflator_2006
+
+vsl <- vsl_2019
+rm(vsl_2019, vsl_2006, gdp_deflator_2019, gdp_deflator_2006)
+
+# Import GDP
+gdp <- read.csv(file = file.path(datapath,"wdi_gdp.csv")) %>%
+select(-(c(3:62))) %>% 
+  rename("gdp" = "X2019")
+gdp <- gdp %>% select(c(iso_code, gdp))
+
+world_map <- left_join(world_map, gdp, by = "iso_code")
+
+world_map$deaths_vsl <- world_map$deaths * vsl
+world_map$deaths_vsl_per_gdp <- world_map$deaths_vsl / world_map$gdp
+world_map$deaths_vsl_per_gdp_per_cap <- world_map$deaths_vsl/(world_map$gdp/(world_map$population*100000))
+
+world_map %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = deaths_vsl), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="VSL lost due to deaths from mental disorders",
+       subtitle="2019",
+       caption=caption,
+       fill="USD 2019") +
+  scale_fill_viridis(option = "plasma") +
+  facet_grid(~estimate)
+
+world_map %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = deaths_vsl_per_gdp), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="VSL lost due to deaths from mental disorders, % of GDP",
+       subtitle="2019. VSL = 9.25 million USD 2019 (from US EPA VSL: 7.4 million USD 2006)",
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(
+    type = "seq",
+    palette = "OrRd",
+    limits = c(0,10),
+    oob = squish,
+    direction = 1) +
+  facet_grid(~estimate)
+
+
+
+# Pull maps to end
+# 
 # Check changes in rankings
 # Look up if there have been changes in disability weights
 # Critiques of disability weights 
+# 
 
-
-
+PAR(1000,.68)
 
 
