@@ -194,16 +194,44 @@ rm(relative_risk, data_prev, data_prev_allmentaldisorders)
 data_rev <- data_rev %>% relocate(par, .after = population)
 data_rev$"Revised - Walker et al. method" = data_rev$par * data_rev$measure_total
 data_rev <- data_rev %>% rename("Original GBD method" = Original)
-data_rev$cause_name <- "Mental disorders"
-data_rev <- data_rev %>% gather("estimate", "number", "Revised - Walker et al. method":"Revised - Vigo et al. method")
 
-data_rev$rate_per_100k <- data_rev$number/data_rev$population
+data_rev$composite_ylds <-ifelse(data_rev$measure_id == 3, data_rev$"Revised - Vigo et al. method", 0)
+data_rev$composite_ylls <-ifelse(data_rev$measure_id == 4, data_rev$"Revised - Walker et al. method", 0)
+
+data_rev_composite <- data_rev %>% select(location_id, measure_id, composite_ylds, composite_ylls) %>%
+  group_by(location_id) %>%
+  mutate(composite_dalys = sum(composite_ylds, composite_ylls))
+
+data_rev_composite <- data_rev_composite %>% filter(measure_id == 2) %>% ungroup() %>% unique() %>% select(c(1,5))
+data_rev <- inner_join(data_rev, data_rev_composite, by = "location_id")
+data_rev$composite_dalys[data_rev$measure_id != 2] <- 0
+data_rev$composite_deaths <-ifelse(data_rev$measure_id == 1, data_rev$"Revised - Walker et al. method", 0)
+
+data_rev$composite <- data_rev$composite_ylds + data_rev$composite_ylds + data_rev$composite_dalys + data_rev$composite_deaths
+
+data_rev <- data_rev %>% select(!c(14:17))
+data_rev <- data_rev %>% rename("Revised - Composite method" = composite)
+
+data_rev <- data_rev %>% relocate(12, .after = par)
+
+data_rev$cause_name <- "Mental disorders"
+data_rev <- data_rev %>% gather("estimate", "number", 11:14)
+
+rm(data_vigo, data_vigo_global, anxiety_cause_id, bipolar_cause_id, depressive_cause_id, inclusion, mental_disorder_cause_id, schizophrenia_cause_id, data_rev_composite)
+data_rev$estimate_id <- ifelse(data_rev$estimate == "Revised - Composite method", 4, 
+                               ifelse(data_rev$estimate == "Revised - Walker et al. method", 3,
+                                      ifelse(data_rev$estimate == "Revised - Vigo et al. method", 2, 1)))
+data_rev <- data_rev %>% relocate(estimate_id, .after = estimate)
+
+data_rev$population_100k <- data_rev$population
+data_rev$population <- data_rev$population_100k  * 100000
+data_rev <- data_rev %>% relocate (population_100k, .after = population)
+
+data_rev$rate_per_100k <- data_rev$number/data_rev$population_100k
 data_rev$percent <- data_rev$number/data_rev$measure_total*100
 
-rm(data_vigo, data_vigo_global, anxiety_cause_id, bipolar_cause_id, depressive_cause_id, inclusion, mental_disorder_cause_id, schizophrenia_cause_id)
-
 ############################
-##           VSL         ##
+##        COSTING         ##
 ############################
 
 # Import GDP
@@ -211,37 +239,29 @@ gdp <- read.csv(file = file.path(datapath,"wdi_gdp.csv")) %>%
   select(-(c(3:62))) %>% 
   rename("gdp" = "X2019")
 gdp <- gdp %>% select(c(iso_code, gdp))
-
 data_rev <- left_join(data_rev, gdp, by = "iso_code")
 data_rev <- data_rev %>% relocate(gdp, .after = iso_code)
-data_rev$population_100k <- data_rev$population
-data_rev$population <- data_rev$population_100k  * 100000
+
+# Calculate GDP per capita, with reference to IHME population values, for consistency
 data_rev$gdp_per_capita <- data_rev$gdp/data_rev$population
 data_rev <- data_rev %>% relocate (gdp_per_capita, .after = gdp)
-data_rev <- data_rev %>% relocate (population_100k, .after = population)
 
+############################
+# Cost per DALY
 
+# Method 1: Copenhagen Consensus 1 - $1,000
+data_rev$cost_cc1 <- ifelse(data_rev$measure_id == 2,
+                            data_rev$number * 1000, 0)
 
+# Method 2: Copenhagen Consensus 2 - $5,000
+data_rev$cost_cc2 <- data_rev$cost_cc1 * 5
 
+# Method 3: WHO - GDP/capita
+data_rev$cost_who1 <-ifelse(data_rev$measure_id == 2,
+                            data_rev$number * data_rev$gdp_per_capita, 0)
 
-vsl_2006 <- 7400000 # Source:https://www.epa.gov/sites/production/files/2017-08/documents/ee-0568-50.pdf
-gdp_deflator_2019 <- 107.494 # Source: https://data.worldbank.org/indicator/NY.GDP.DEFL.ZS?locations=US
-gdp_deflator_2006 <- 86.01
-vsl_2019 <- vsl_2006 * gdp_deflator_2019 / gdp_deflator_2006
-
-vsl <- vsl_2019
-rm(vsl_2019, vsl_2006, gdp_deflator_2019, gdp_deflator_2006)
-
-
-
-
-world_map$deaths_vsl <- world_map$deaths * vsl
-world_map$deaths_vsl_per_gdp <- world_map$deaths_vsl / world_map$gdp
-world_map$deaths_vsl_per_gdp_per_cap <- world_map$deaths_vsl/(world_map$gdp/(world_map$population*100000))
-
-
-
-
+# Method 4: WHO - GDP/capita * 3
+data_rev$cost_who2 <- data_rev$cost_who1 * 3
 
 ############################
 ##           MAPS         ##
@@ -254,11 +274,19 @@ world_map <- world_map %>% filter(iso_code != "..") %>% select(!(c(6)))
 data_rev_map <- full_join(data_rev, world_map, by = "iso_code")
 rm(world_map_crosswalk, world_map)
 
-# Rates
+
+data_rev_map$estimate <- factor(data_rev_map$estimate,      # Reordering group factor levels
+                         levels = c("Original GBD method",
+                                    "Revised - Vigo et al. method",
+                                    "Revised - Walker et al. method",
+                                    "Revised - Composite method"))
+
+# Rates of deaths, DALYs
 
 caption <- "Source: Global Burden of Disease Study, Vigo et al. 2016, Walker et al. 2015"
 
 data_rev_map %>% filter(measure_id== "1") %>% 
+  filter(estimate_id %in% c(1,2,3)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
   geom_polygon(aes(fill = rate_per_100k), color = "black", size = 0.01) + 
   theme(panel.grid.major = element_blank(), 
@@ -273,9 +301,26 @@ data_rev_map %>% filter(measure_id== "1") %>%
   scale_fill_distiller(palette = "RdYlBu") +
   facet_grid(~estimate)
 
-# Percent of deaths
+data_rev_map %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = rate_per_100k), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="DALYs due to mental disorders per 100,000",
+       subtitle="2019",
+       caption=caption,
+       fill="DALYs") +
+  scale_fill_distiller(palette = "RdYlBu") +
+  facet_grid(~estimate)
+
+# Percent of deaths, DALYs
 
 data_rev_map %>% filter(measure_id== "1") %>% 
+  filter(estimate_id %in% c(1,2,3)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
   geom_polygon(aes(fill = percent), color = "black", size = 0.01) + 
   theme(panel.grid.major = element_blank(), 
@@ -293,12 +338,111 @@ data_rev_map %>% filter(measure_id== "1") %>%
     facet_grid(~estimate)
 
 
+data_rev_map %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = percent), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="DALYs due to mental disorders, % of DALYs",
+       subtitle="2019",
+       caption=caption,
+       fill="% of DALYs ") +
+  scale_fill_viridis(option = "plasma", direction = 1) +
+  facet_grid(~estimate)
 
-# 
+# Cost, per GDP
+
+subtitle_1 <- "Value per DALY: $1,000"
+subtitle_2 <- "Value per DALY: $5,000"
+subtitle_3 <- "Value per DALY: GDP/capita"
+subtitle_4 <- "Value per DALY: 3 X GDP/capita"
+
+data_rev_map %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = cost_cc1/gdp*100), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle=subtitle_1,
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                     oob = squish) +
+  facet_grid(~estimate)
+
+data_rev_map %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = cost_cc2/gdp*100), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle=subtitle_2,
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       oob = squish) +
+  facet_grid(~estimate)
+
+data_rev_map %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = cost_who1/gdp*100), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle=subtitle_3,
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       oob = squish) +
+  facet_grid(~estimate)
+
+data_rev_map %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = cost_who2/gdp*100), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle=subtitle_4,
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       oob = squish) +
+  facet_grid(~estimate)
+
+#############################
+# TO DO
+
 # Check changes in rankings
 # Look up if there have been changes in disability weights
 # Critiques of disability weights 
-# 
+# Method 5: Bloom et al.
+# Method 6: Lancet 
 
+#vsl_2006 <- 7400000 # Source:https://www.epa.gov/sites/production/files/2017-08/documents/ee-0568-50.pdf
+#gdp_deflator_2019 <- 107.494 # Source: https://data.worldbank.org/indicator/NY.GDP.DEFL.ZS?locations=US
+#gdp_deflator_2006 <- 86.01
+#vsl_2019 <- vsl_2006 * gdp_deflator_2019 / gdp_deflator_2006
+#vsl <- vsl_2019
+#rm(vsl_2019, vsl_2006, gdp_deflator_2019, gdp_deflator_2006)
 
 
