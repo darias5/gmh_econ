@@ -269,6 +269,7 @@ gdp <- read.csv(file = file.path(datapath,"wdi_gdp.csv")) %>%
 gdp <- gdp %>% select(c(iso_code, gdp))
 data_rev <- left_join(data_rev, gdp, by = "iso_code")
 data_rev <- data_rev %>% relocate(gdp, .after = iso_code)
+data_rev$gdp[data_rev$location_id == 1] <- 87798525859220.9          # Source: World Bank, WDI
 
 # Calculate GDP per capita, with reference to IHME population values, for consistency
 data_rev$gdp_per_capita <- data_rev$gdp/data_rev$population
@@ -291,8 +292,11 @@ data_rev$cost_who1 <-ifelse(data_rev$measure_id == 2,
 # Method 4: WHO - GDP/capita * 3
 data_rev$cost_who2 <- data_rev$cost_who1 * 3
 
+# Pulling out global estimates
+data_global <- data_rev %>% filter(location_id == 1) %>% filter(measure_id == 2)
+
 ############################
-##           MAPS         ##
+##         MAPS           ##
 ############################
 
 # Import map data
