@@ -87,11 +87,11 @@ musculoskeletal_cause_id <- 626
 all_cause_id <- 294
 
 revision_full <- c(mental_disorder_cause_id,
-              dementia_cause_id,
-              epilepsy_cause_id,
-              migraine_cause_id,
-              tension_type_headache_cause_id,
-              self_harm)
+                   dementia_cause_id,
+                   epilepsy_cause_id,
+                   migraine_cause_id,
+                   tension_type_headache_cause_id,
+                   self_harm)
 
 revision_third <- musculoskeletal_cause_id
 inclusion <- c(mental_disorder_cause_id,
@@ -276,16 +276,17 @@ rm(world_map_crosswalk, world_map)
 
 
 data_rev_map$estimate <- factor(data_rev_map$estimate,      # Reordering group factor levels
-                         levels = c("Original GBD method",
-                                    "Revised - Vigo et al. method",
-                                    "Revised - Walker et al. method",
-                                    "Revised - Composite method"))
+                                levels = c("Original GBD method",
+                                           "Revised - Vigo et al. method",
+                                           "Revised - Walker et al. method",
+                                           "Revised - Composite method"))
 
 # Rates of deaths, DALYs
 
 caption <- "Source: Global Burden of Disease Study, Vigo et al. 2016, Walker et al. 2015"
 
-data_rev_map %>% filter(measure_id== "1") %>% 
+map_deaths_per_cap <-
+  data_rev_map %>% filter(measure_id== "1") %>% 
   filter(estimate_id %in% c(1,2,3)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
   geom_polygon(aes(fill = rate_per_100k), color = "black", size = 0.01) + 
@@ -301,7 +302,10 @@ data_rev_map %>% filter(measure_id== "1") %>%
   scale_fill_distiller(palette = "RdYlBu") +
   facet_grid(~estimate)
 
-data_rev_map %>% filter(measure_id== "2") %>% 
+ggsave(map_deaths_per_cap, device = "png")
+
+map_dalys_per_cap <-
+  data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
   geom_polygon(aes(fill = rate_per_100k), color = "black", size = 0.01) + 
@@ -319,7 +323,8 @@ data_rev_map %>% filter(measure_id== "2") %>%
 
 # Percent of deaths, DALYs
 
-data_rev_map %>% filter(measure_id== "1") %>% 
+map_deaths_percent <-
+  data_rev_map %>% filter(measure_id== "1") %>% 
   filter(estimate_id %in% c(1,2,3)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
   geom_polygon(aes(fill = percent), color = "black", size = 0.01) + 
@@ -335,10 +340,10 @@ data_rev_map %>% filter(measure_id== "1") %>%
   scale_fill_viridis(option = "plasma", direction = 1,
                      limits=c(0, 15), 
                      oob=squish) +
-    facet_grid(~estimate)
+  facet_grid(~estimate)
 
-
-data_rev_map %>% filter(measure_id== "2") %>% 
+map_dalys_percent <-
+  data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
   geom_polygon(aes(fill = percent), color = "black", size = 0.01) + 
@@ -361,7 +366,8 @@ subtitle_2 <- "Value per DALY: $5,000"
 subtitle_3 <- "Value per DALY: GDP/capita"
 subtitle_4 <- "Value per DALY: 3 X GDP/capita"
 
-data_rev_map %>% filter(measure_id== "2") %>% 
+map_value_cc1 <- 
+  data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
   geom_polygon(aes(fill = cost_cc1/gdp*100), color = "black", size = 0.01) + 
@@ -375,10 +381,12 @@ data_rev_map %>% filter(measure_id== "2") %>%
        caption=caption,
        fill="% of GDP") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
-                     oob = squish) +
+                       limit = c(0, 25),
+                       oob = squish) +
   facet_grid(~estimate)
 
-data_rev_map %>% filter(measure_id== "2") %>% 
+map_value_cc2 <- 
+  data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
   geom_polygon(aes(fill = cost_cc2/gdp*100), color = "black", size = 0.01) + 
@@ -392,10 +400,12 @@ data_rev_map %>% filter(measure_id== "2") %>%
        caption=caption,
        fill="% of GDP") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limit = c(0, 25),
                        oob = squish) +
   facet_grid(~estimate)
 
-data_rev_map %>% filter(measure_id== "2") %>% 
+map_value_who1 <- 
+  data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
   geom_polygon(aes(fill = cost_who1/gdp*100), color = "black", size = 0.01) + 
@@ -412,7 +422,8 @@ data_rev_map %>% filter(measure_id== "2") %>%
                        oob = squish) +
   facet_grid(~estimate)
 
-data_rev_map %>% filter(measure_id== "2") %>% 
+map_value_who2 <- 
+  data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
   geom_polygon(aes(fill = cost_who2/gdp*100), color = "black", size = 0.01) + 
@@ -428,6 +439,8 @@ data_rev_map %>% filter(measure_id== "2") %>%
   scale_fill_distiller(palette = "OrRd", direction = 1,
                        oob = squish) +
   facet_grid(~estimate)
+
+
 
 #############################
 # TO DO
