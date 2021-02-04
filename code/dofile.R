@@ -13,6 +13,7 @@
 # setting directories - change to your local directory
 path <- "~/3. PhD/WQE/WQE II/gmh_cost"
 datapath <- paste(path,'data', sep = "/")
+resultspath <- paste(path,'results', sep = "/")
 
 # Loading libraries
 library(readxl)
@@ -302,8 +303,11 @@ map_deaths_per_cap <-
   scale_fill_distiller(palette = "RdYlBu") +
   facet_grid(~estimate)
 
-ggsave(map_deaths_per_cap, device = "png")
-
+ggsave(filename = "fig1.png", plot = last_plot(), 
+       path = resultspath,
+       width = 8,
+       height = 4)
+       
 map_dalys_per_cap <-
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
@@ -321,13 +325,18 @@ map_dalys_per_cap <-
   scale_fill_distiller(palette = "RdYlBu") +
   facet_grid(~estimate)
 
+ggsave(filename = "fig2.png", plot = last_plot(), 
+       path = resultspath,
+       width = 8,
+       height = 4)
+
 # Percent of deaths, DALYs
 
 map_deaths_percent <-
   data_rev_map %>% filter(measure_id== "1") %>% 
   filter(estimate_id %in% c(1,2,3)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = percent), color = "black", size = 0.01) + 
+  geom_polygon(aes(fill = round(percent,0)), color = "black", size = 0.01) + 
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
@@ -336,11 +345,17 @@ map_deaths_percent <-
   labs(title="Deaths due to mental disorders, % of deaths",
        subtitle="2019",
        caption=caption,
-       fill="% of deaths ") +
-  scale_fill_viridis(option = "plasma", direction = 1,
-                     limits=c(0, 15), 
-                     oob=squish) +
+       fill="Percent") +
+  scale_fill_distiller(palette = "YlGn",
+                       direction = 1,
+                       limits = c(0,10),
+                       oob = squish) +
   facet_grid(~estimate)
+
+ggsave(filename = "fig3.png", plot = last_plot(), 
+       path = resultspath,
+       width = 8,
+       height = 4)
 
 map_dalys_percent <-
   data_rev_map %>% filter(measure_id== "2") %>% 
@@ -355,9 +370,15 @@ map_dalys_percent <-
   labs(title="DALYs due to mental disorders, % of DALYs",
        subtitle="2019",
        caption=caption,
-       fill="% of DALYs ") +
-  scale_fill_viridis(option = "plasma", direction = 1) +
+       fill="Percent") +
+  scale_fill_distiller(palette = "YlGn",
+                       direction = 1) + 
   facet_grid(~estimate)
+
+ggsave(filename = "fig4.png", plot = last_plot(), 
+       path = resultspath,
+       width = 8,
+       height = 4)
 
 # Cost, per GDP
 
@@ -385,6 +406,11 @@ map_value_cc1 <-
                        oob = squish) +
   facet_grid(~estimate)
 
+ggsave(filename = "fig5.png", plot = last_plot(), 
+       path = resultspath,
+       width = 8,
+       height = 4)
+
 map_value_cc2 <- 
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
@@ -404,6 +430,11 @@ map_value_cc2 <-
                        oob = squish) +
   facet_grid(~estimate)
 
+ggsave(filename = "fig6.png", plot = last_plot(), 
+       path = resultspath,
+       width = 8,
+       height = 4)
+
 map_value_who1 <- 
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
@@ -419,8 +450,14 @@ map_value_who1 <-
        caption=caption,
        fill="% of GDP") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0,10),
                        oob = squish) +
   facet_grid(~estimate)
+
+ggsave(filename = "fig7.png", plot = last_plot(), 
+       path = resultspath,
+       width = 8,
+       height = 4)
 
 map_value_who2 <- 
   data_rev_map %>% filter(measure_id== "2") %>% 
@@ -440,7 +477,10 @@ map_value_who2 <-
                        oob = squish) +
   facet_grid(~estimate)
 
-
+ggsave(filename = "fig8.png", plot = last_plot(), 
+       path = resultspath,
+       width = 8,
+       height = 4)
 
 #############################
 # TO DO
@@ -450,6 +490,10 @@ map_value_who2 <-
 # Critiques of disability weights 
 # Method 5: Bloom et al.
 # Method 6: Lancet 
+# Consider filtering out islands to reduce visual clutter
+# See if there's a fix for Western Sahara
+
+# Old code for VSL US
 
 #vsl_2006 <- 7400000 # Source:https://www.epa.gov/sites/production/files/2017-08/documents/ee-0568-50.pdf
 #gdp_deflator_2019 <- 107.494 # Source: https://data.worldbank.org/indicator/NY.GDP.DEFL.ZS?locations=US
