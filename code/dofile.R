@@ -545,6 +545,7 @@ ggsave(filename = "fig8.png", plot = last_plot(),
 # Consider filtering out islands to reduce visual clutter
 # See if there's a fix for Western Sahara
 # Figure out adjustment for scale to account for out of bounds in labeling
+# Proofread code
 
 # Old code for VSL US
 
