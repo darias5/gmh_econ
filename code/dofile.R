@@ -24,6 +24,7 @@ library(RColorBrewer)
 library(maps)
 library(scales)
 library(viridis)
+library(data.table)
 
 
 ######################
@@ -274,6 +275,9 @@ data_rev$gdp[data_rev$location_id == 1] <- 87798525859220.9          # Source: W
 # Calculate GDP per capita, with reference to IHME population values, for consistency
 data_rev$gdp_per_capita <- data_rev$gdp/data_rev$population
 data_rev <- data_rev %>% relocate (gdp_per_capita, .after = gdp)
+
+# Clean up
+rm(gdp)
 
 ############################
 # Cost per DALY
@@ -534,7 +538,75 @@ ggsave(filename = "fig8.png", plot = last_plot(),
        width = 8,
        height = 4)
 
-#############################
+
+############################
+##        TABLES          ##
+############################
+
+# Table 1: Burden of disease due to mental disorders
+
+# Global
+table1 <- data_global %>% filter(estimate_id != 3) %>% select(estimate, number, percent)
+table1$percent <- round(table1$percent, 2)
+table1$number <- round(table1$number/1000000,3)
+
+write.csv(table1, file = "results/table1_global.csv")
+
+# Regional
+table1 <- data_rev %>% filter(estimate_id != 3) %>% 
+  filter(measure_id == 2) %>% 
+  filter(location_id != 1)%>% 
+  select(iso_code, measure_total, estimate, number)
+
+
+# Adding regions
+region <- read_excel(path = file.path(datapath, "regions.xlsx"))
+table1 <- left_join(table1, region, by = "iso_code")
+
+table1 <- table1 %>% group_by(region, estimate) %>% mutate(region_dalytotal = sum(measure_total),
+                                                                 region_dalymh = sum(number))
+
+table1$percent <- round(table1$region_dalymh/table1$region_dalytotal*100, 2)
+table1 <- table1 %>% ungroup() %>% select(region, estimate, region_dalymh, percent) %>% unique()
+table1$region_dalymh <- round(table1$region_dalymh/1000000,3)
+
+write.csv(table1, file = "results/table1_region.csv")
+
+# Income level
+
+table1 <- data_rev %>% filter(estimate_id != 3) %>% 
+  filter(measure_id == 2) %>% 
+  filter(location_id != 1)%>% 
+  select(income_level, measure_total, estimate, number)
+
+table1 <- table1 %>% group_by(income_level, estimate) %>% mutate(income_level_dalytotal = sum(measure_total),
+                                                       income_level_dalymh = sum(number))
+
+table1$percent <- round(table1$income_level_dalymh/table1$income_level_dalytotal*100, 2)
+table1 <- table1 %>% ungroup() %>% select(income_level, estimate, income_level_dalymh, percent) %>% unique()
+table1$income_level_dalymh <- round(table1$income_level_dalymh/1000000,3)
+
+write.csv(table1, file = "results/table1_income.csv")
+
+rm(table1, region)
+
+# Table 2: Value of economic welfare estimates 
+
+table2 <- data_global %>% filter(estimate_id != 3) %>% select(estimate, cost_cc1, cost_cc2, cost_who1, cost_who2)
+table2$cost_cc1 <- round(table2$cost_cc1/1000000000000,2)
+table2$cost_cc2 <- round(table2$cost_cc2/1000000000000,2)
+table2$cost_who1 <- round(table2$cost_who1/1000000000000,2)
+table2$cost_who2 <- round(table2$cost_who2/1000000000000,2)
+table2_t <- transpose(table2)
+
+colnames(table2_t) <- rownames(table2)
+rownames(table2_t) <- colnames(table2)
+
+write.csv(table2_t, file = "results/table2.csv")
+rm(table2, table2_t)
+
+
+############################################
 # TO DO
 
 # Check changes in rankings
