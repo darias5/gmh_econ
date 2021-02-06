@@ -11,7 +11,7 @@
 ######################
 
 # setting directories - change to your local directory
-path <- "~/3. PhD/WQE/WQE II/gmh_cost"
+path <- "~/3. PhD/WQE/WQE II/gmh_econ"
 datapath <- paste(path,'data', sep = "/")
 resultspath <- paste(path,'results', sep = "/")
 
@@ -335,7 +335,7 @@ caption <- "Source: Global Burden of Disease Study, Vigo et al. 2016, Walker et 
 
 map_deaths_per_cap <-
   data_rev_map %>% filter(measure_id== "1") %>% 
-  filter(estimate_id %in% c(1,2,3)) %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
   geom_polygon(aes(fill = rate_per_100k), color = "black", size = 0.01) + 
   theme(panel.grid.major = element_blank(), 
@@ -383,7 +383,7 @@ ggsave(filename = "fig2.png", plot = last_plot(),
 
 map_deaths_percent <-
   data_rev_map %>% filter(measure_id== "1") %>% 
-  filter(estimate_id %in% c(1,2,3)) %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot(aes(x = long, y = lat, group = group)) +
   geom_polygon(aes(fill = round(percent,0)), color = "black", size = 0.01) + 
   theme(panel.grid.major = element_blank(), 
