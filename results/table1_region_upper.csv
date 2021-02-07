@@ -1,0 +1,16 @@
+"","region","estimate","region_dalymh","percent"
+"1","Europe","Original GBD method",18.937,6.52
+"2","Asia","Original GBD method",91.449,5.79
+"3","Oceania","Original GBD method",1.153,7.6
+"4","Americas","Original GBD method",26.641,7.65
+"5","Africa","Original GBD method",25.948,3.89
+"6","Europe","Revised - Vigo et al. method",63.348,21.82
+"7","Asia","Revised - Vigo et al. method",273.886,17.33
+"8","Oceania","Revised - Vigo et al. method",3.033,19.98
+"9","Americas","Revised - Vigo et al. method",75.672,21.74
+"10","Africa","Revised - Vigo et al. method",62.441,9.36
+"11","Europe","Revised - Composite method",59.428,20.47
+"12","Asia","Revised - Composite method",287.385,18.19
+"13","Oceania","Revised - Composite method",3.095,20.4
+"14","Americas","Revised - Composite method",77.786,22.35
+"15","Africa","Revised - Composite method",85.571,12.82

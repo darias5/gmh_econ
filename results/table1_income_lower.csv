@@ -1,0 +1,16 @@
+"","income_level","estimate","income_level_dalymh","percent"
+"1","H","Original GBD method",18.146,5.67
+"2","UM","Original GBD method",33.824,4.74
+"3","LM","Original GBD method",33,3.59
+"4","L","Original GBD method",7.368,2.85
+"5",NA,"Original GBD method",0,3.83
+"6","H","Revised - Vigo et al. method",32.859,10.26
+"7","UM","Revised - Vigo et al. method",54.555,7.64
+"8","LM","Revised - Vigo et al. method",55.308,6.02
+"9","L","Revised - Vigo et al. method",10.48,4.05
+"10",NA,"Revised - Vigo et al. method",0,6.71
+"11","H","Revised - Composite method",38.052,11.88
+"12","UM","Revised - Composite method",71.591,10.03
+"13","LM","Revised - Composite method",81.958,8.92
+"14","L","Revised - Composite method",21.367,8.27
+"15",NA,"Revised - Composite method",0.001,8.65
