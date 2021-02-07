@@ -772,7 +772,7 @@ relative_risk <- data.frame(
     depressive_cause_id,
     bipolar_cause_id,
     anxiety_cause_id),
-  c(2.22,
+  c(2.12,
     2.54,
     1.71,
     2,
@@ -783,7 +783,7 @@ colnames(relative_risk) <- c("cause_id", "rel_risk")
 data_prev <- inner_join(data_prev, relative_risk, by = "cause_id")
 
 # Calculating PAR using formula from Walker et al.
-data_prev$par <-     data_prev$val  * ((data_prev$rel_risk - 1) /    data_prev$rel_risk)
+data_prev$par <-     data_prev$lower  * ((data_prev$rel_risk - 1) /    data_prev$rel_risk)
 
 # Filtering for mental disorders combined, only
 data_prev_allmentaldisorders <- data_prev %>% filter(cause_id == mental_disorder_cause_id) %>% select(c(location_id,par))
@@ -1088,7 +1088,7 @@ relative_risk <- data.frame(
     depressive_cause_id,
     bipolar_cause_id,
     anxiety_cause_id),
-  c(2.22,
+  c(2.33,
     2.54,
     1.71,
     2,
@@ -1099,7 +1099,7 @@ colnames(relative_risk) <- c("cause_id", "rel_risk")
 data_prev <- inner_join(data_prev, relative_risk, by = "cause_id")
 
 # Calculating PAR using formula from Walker et al.
-data_prev$par <-     data_prev$val  * ((data_prev$rel_risk - 1) /    data_prev$rel_risk)
+data_prev$par <-     data_prev$upper  * ((data_prev$rel_risk - 1) /    data_prev$rel_risk)
 
 # Filtering for mental disorders combined, only
 data_prev_allmentaldisorders <- data_prev %>% filter(cause_id == mental_disorder_cause_id) %>% select(c(location_id,par))
