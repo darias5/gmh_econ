@@ -356,7 +356,7 @@ map_deaths_per_cap <-
 
 ggsave(filename = "fig1.png", plot = last_plot(), 
        path = resultspath,
-       width = 8,
+       width = 9,
        height = 4)
 
 # DALYS per capita
@@ -380,7 +380,7 @@ map_dalys_per_cap <-
 
 ggsave(filename = "fig2.png", plot = last_plot(), 
        path = resultspath,
-       width = 8,
+       width = 9,
        height = 4)
 
 # Percent of deaths
@@ -407,7 +407,7 @@ map_deaths_percent <-
 
 ggsave(filename = "fig3.png", plot = last_plot(), 
        path = resultspath,
-       width = 8,
+       width = 9,
        height = 4)
 
 # Percent of DALYs
@@ -432,7 +432,7 @@ map_dalys_percent <-
 
 ggsave(filename = "fig4.png", plot = last_plot(), 
        path = resultspath,
-       width = 8,
+       width = 9,
        height = 4)
 
 # Value (CC1), % of GDP
@@ -458,7 +458,7 @@ map_value_cc1 <-
 
 ggsave(filename = "fig5.png", plot = last_plot(), 
        path = resultspath,
-       width = 8,
+       width = 9,
        height = 4)
 
 # Value (CC2), % of GDP
@@ -484,7 +484,7 @@ map_value_cc2 <-
 
 ggsave(filename = "fig6.png", plot = last_plot(), 
        path = resultspath,
-       width = 8,
+       width = 9,
        height = 4)
 
 # Value (WHO1), % of GDP
@@ -510,7 +510,7 @@ map_value_who1 <-
 
 ggsave(filename = "fig7.png", plot = last_plot(), 
        path = resultspath,
-       width = 8,
+       width = 9,
        height = 4)
 
 # Value (WHO2), % of GDP
@@ -535,7 +535,7 @@ map_value_who2 <-
 
 ggsave(filename = "fig8.png", plot = last_plot(), 
        path = resultspath,
-       width = 8,
+       width = 9,
        height = 4)
 
 
