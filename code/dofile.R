@@ -626,7 +626,6 @@ rm(table2, table2_t)
 # Make Table 1 easier to replicate
 # Incorporate sensitivity analysis within this
 # Do more grouping
-# Look at YLLs, YLDs, Deaths, and DALYs
 # Gather a few studies that focus on NCDs (cancers, CVD, etc.) and risk of death due to mental disorders
 # 
 
