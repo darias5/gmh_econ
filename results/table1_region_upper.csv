@@ -1,16 +1,61 @@
-"","region","estimate","region_dalymh","percent"
-"1","Europe","Original GBD method",18.937,6.52
-"2","Asia","Original GBD method",91.449,5.79
-"3","Oceania","Original GBD method",1.153,7.6
-"4","Americas","Original GBD method",26.641,7.65
-"5","Africa","Original GBD method",25.948,3.89
-"6","Europe","Revised - Vigo et al. method",63.348,21.82
-"7","Asia","Revised - Vigo et al. method",273.886,17.33
-"8","Oceania","Revised - Vigo et al. method",3.033,19.98
-"9","Americas","Revised - Vigo et al. method",75.672,21.74
-"10","Africa","Revised - Vigo et al. method",62.441,9.36
-"11","Europe","Revised - Composite method",60.943,20.99
-"12","Asia","Revised - Composite method",296.537,18.77
-"13","Oceania","Revised - Composite method",3.192,21.03
-"14","Americas","Revised - Composite method",79.807,22.93
-"15","Africa","Revised - Composite method",90.142,13.51
+"","measure_id","region","estimate","region_dalymh","percent"
+"1",1,"Asia","Original GBD method",0,0
+"2",1,"Europe","Original GBD method",0,0
+"3",1,"Americas","Original GBD method",0,0
+"4",1,"Africa","Original GBD method",0,0
+"5",1,"Oceania","Original GBD method",0,0
+"6",2,"Europe","Original GBD method",18.937,6.52
+"7",2,"Asia","Original GBD method",91.449,5.79
+"8",2,"Oceania","Original GBD method",1.153,7.6
+"9",2,"Americas","Original GBD method",26.641,7.65
+"10",2,"Africa","Original GBD method",25.948,3.89
+"11",3,"Europe","Original GBD method",18.932,14.32
+"12",3,"Asia","Original GBD method",91.438,14.07
+"13",3,"Americas","Original GBD method",26.638,15.88
+"14",3,"Africa","Original GBD method",25.947,16.33
+"15",3,"Oceania","Original GBD method",1.153,17.01
+"16",4,"Europe","Original GBD method",0.007,0
+"17",4,"Asia","Original GBD method",0.013,0
+"18",4,"Americas","Original GBD method",0.004,0
+"19",4,"Oceania","Original GBD method",0,0
+"20",4,"Africa","Original GBD method",0.003,0
+"21",1,"Asia","Revised - Vigo et al. method",3.069,8.62
+"22",1,"Europe","Revised - Vigo et al. method",1.259,14.02
+"23",1,"Americas","Revised - Vigo et al. method",0.985,12.65
+"24",1,"Africa","Revised - Vigo et al. method",0.407,3.9
+"25",1,"Oceania","Revised - Vigo et al. method",0.045,13.86
+"26",2,"Europe","Revised - Vigo et al. method",63.348,21.82
+"27",2,"Asia","Revised - Vigo et al. method",273.886,17.33
+"28",2,"Oceania","Revised - Vigo et al. method",3.033,19.98
+"29",2,"Americas","Revised - Vigo et al. method",75.672,21.74
+"30",2,"Africa","Revised - Vigo et al. method",62.441,9.36
+"31",3,"Europe","Revised - Vigo et al. method",46.778,35.38
+"32",3,"Asia","Revised - Vigo et al. method",217.007,33.4
+"33",3,"Americas","Revised - Vigo et al. method",61.577,36.71
+"34",3,"Africa","Revised - Vigo et al. method",52.678,33.16
+"35",3,"Oceania","Revised - Vigo et al. method",2.402,35.42
+"36",4,"Europe","Revised - Vigo et al. method",17.351,10.4
+"37",4,"Asia","Revised - Vigo et al. method",59.47,5.89
+"38",4,"Americas","Revised - Vigo et al. method",14.727,7.75
+"39",4,"Oceania","Revised - Vigo et al. method",0.655,7.45
+"40",4,"Africa","Revised - Vigo et al. method",10.439,1.93
+"41",1,"Asia","Revised - Composite method",2.761,7.76
+"42",1,"Europe","Revised - Composite method",0.781,8.7
+"43",1,"Americas","Revised - Composite method",0.753,9.68
+"44",1,"Africa","Revised - Composite method",0.745,7.14
+"45",1,"Oceania","Revised - Composite method",0.033,10.04
+"46",2,"Europe","Revised - Composite method",60.943,20.99
+"47",2,"Asia","Revised - Composite method",296.537,18.77
+"48",2,"Oceania","Revised - Composite method",3.192,21.03
+"49",2,"Americas","Revised - Composite method",79.807,22.93
+"50",2,"Africa","Revised - Composite method",90.142,13.51
+"51",3,"Europe","Revised - Composite method",46.778,35.38
+"52",3,"Asia","Revised - Composite method",217.007,33.4
+"53",3,"Americas","Revised - Composite method",61.577,36.71
+"54",3,"Africa","Revised - Composite method",52.678,33.16
+"55",3,"Oceania","Revised - Composite method",2.402,35.42
+"56",4,"Europe","Revised - Composite method",14.165,8.49
+"57",4,"Asia","Revised - Composite method",79.53,7.88
+"58",4,"Americas","Revised - Composite method",18.23,9.59
+"59",4,"Oceania","Revised - Composite method",0.79,8.99
+"60",4,"Africa","Revised - Composite method",37.464,6.94

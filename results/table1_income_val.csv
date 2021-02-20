@@ -1,0 +1,61 @@
+"","income_level","measure_id","estimate","income_level_dalymh","percent"
+"1","LM",1,"Original GBD method",0,0
+"2","H",1,"Original GBD method",0,0
+"3","UM",1,"Original GBD method",0,0
+"4","L",1,"Original GBD method",0,0
+"5",NA,1,"Original GBD method",0,0
+"6","H",2,"Original GBD method",24.52,6.68
+"7","UM",2,"Original GBD method",45.645,5.57
+"8","LM",2,"Original GBD method",44.925,4.28
+"9","L",2,"Original GBD method",10.146,3.36
+"10",NA,2,"Original GBD method",0,4.49
+"11","H",3,"Original GBD method",24.51,14.12
+"12","UM",3,"Original GBD method",45.641,14.49
+"13","LM",3,"Original GBD method",44.922,14.47
+"14","L",3,"Original GBD method",10.146,16.5
+"15",NA,3,"Original GBD method",0,12.29
+"16","H",4,"Original GBD method",0.011,0.01
+"17","UM",4,"Original GBD method",0.004,0
+"18","LM",4,"Original GBD method",0.002,0
+"19","L",4,"Original GBD method",0,0
+"20",NA,4,"Original GBD method",0,0
+"21","LM",1,"Revised - Vigo et al. method",0.733,3.69
+"22","H",1,"Revised - Vigo et al. method",1.02,9.12
+"23","UM",1,"Revised - Vigo et al. method",1.042,4.99
+"24","L",1,"Revised - Vigo et al. method",0.103,2.24
+"25",NA,1,"Revised - Vigo et al. method",0,5.14
+"26","H",2,"Revised - Vigo et al. method",66.054,17.99
+"27","UM",2,"Revised - Vigo et al. method",110.012,13.43
+"28","LM",2,"Revised - Vigo et al. method",105.067,10.02
+"29","L",2,"Revised - Vigo et al. method",19.427,6.44
+"30",NA,2,"Revised - Vigo et al. method",0.001,12.3
+"31","H",3,"Revised - Vigo et al. method",50.799,29.26
+"32","UM",3,"Revised - Vigo et al. method",89.167,28.31
+"33","LM",3,"Revised - Vigo et al. method",82.047,26.43
+"34","L",3,"Revised - Vigo et al. method",16.162,26.28
+"35",NA,3,"Revised - Vigo et al. method",0.001,25.17
+"36","H",4,"Revised - Vigo et al. method",15.254,7.88
+"37","UM",4,"Revised - Vigo et al. method",20.845,4.14
+"38","LM",4,"Revised - Vigo et al. method",23.02,3.12
+"39","L",4,"Revised - Vigo et al. method",3.265,1.36
+"40",NA,4,"Revised - Vigo et al. method",0,4.89
+"41","LM",1,"Revised - Composite method",1.382,6.96
+"42","H",1,"Revised - Composite method",0.92,8.23
+"43","UM",1,"Revised - Composite method",1.441,6.91
+"44","L",1,"Revised - Composite method",0.304,6.62
+"45",NA,1,"Revised - Composite method",0,6.61
+"46","H",2,"Revised - Composite method",66.816,18.2
+"47","UM",2,"Revised - Composite method",124.201,15.16
+"48","LM",2,"Revised - Composite method",132.161,12.6
+"49","L",2,"Revised - Composite method",31.835,10.55
+"50",NA,2,"Revised - Composite method",0.001,13.39
+"51","H",3,"Revised - Composite method",50.799,29.26
+"52","UM",3,"Revised - Composite method",89.167,28.31
+"53","LM",3,"Revised - Composite method",82.047,26.43
+"54","L",3,"Revised - Composite method",16.162,26.28
+"55",NA,3,"Revised - Composite method",0.001,25.17
+"56","H",4,"Revised - Composite method",16.016,8.28
+"57","UM",4,"Revised - Composite method",35.034,6.95
+"58","LM",4,"Revised - Composite method",50.114,6.79
+"59","L",4,"Revised - Composite method",15.673,6.53
+"60",NA,4,"Revised - Composite method",0,6.61
