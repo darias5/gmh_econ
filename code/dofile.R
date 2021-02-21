@@ -25,7 +25,7 @@ library(maps)
 library(scales)
 library(viridis)
 library(data.table)
-
+library(ggpubr)
 
 ######################
 ##       DATA       ##
@@ -360,7 +360,7 @@ map_deaths_per_cap <-
 
 ggsave(filename = "fig1.png", plot = last_plot(), 
        path = resultspath,
-       width = 9,
+       width = 10,
        height = 4)
 
 # DALYS per capita
@@ -384,7 +384,7 @@ map_dalys_per_cap <-
 
 ggsave(filename = "fig2.png", plot = last_plot(), 
        path = resultspath,
-       width = 9,
+       width = 10,
        height = 4)
 
 # Percent of deaths
@@ -411,7 +411,7 @@ map_deaths_percent <-
 
 ggsave(filename = "fig3.png", plot = last_plot(), 
        path = resultspath,
-       width = 9,
+       width = 10,
        height = 4)
 
 # Percent of DALYs
@@ -436,7 +436,7 @@ map_dalys_percent <-
 
 ggsave(filename = "fig4.png", plot = last_plot(), 
        path = resultspath,
-       width = 9,
+       width = 10,
        height = 4)
 
 # Value (CC1), % of GDP
@@ -462,8 +462,8 @@ map_value_cc1 <-
 
 ggsave(filename = "fig5.png", plot = last_plot(), 
        path = resultspath,
-       width = 9,
-       height = 4)
+       width = 10,
+       height = 3)
 
 # Value (CC2), % of GDP
 
@@ -488,8 +488,8 @@ map_value_cc2 <-
 
 ggsave(filename = "fig6.png", plot = last_plot(), 
        path = resultspath,
-       width = 9,
-       height = 4)
+       width = 10,
+       height = 3)
 
 # Value (WHO1), % of GDP
 
@@ -514,8 +514,8 @@ map_value_who1 <-
 
 ggsave(filename = "fig7.png", plot = last_plot(), 
        path = resultspath,
-       width = 9,
-       height = 4)
+       width = 10,
+       height = 3)
 
 # Value (WHO2), % of GDP
 
@@ -539,9 +539,90 @@ map_value_who2 <-
 
 ggsave(filename = "fig8.png", plot = last_plot(), 
        path = resultspath,
-       width = 9,
-       height = 4)
+       width = 10,
+       height = 3)
 
+# Combined value maps
+
+
+map_value_cc1_notitle <- 
+  data_rev_map %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = cost_cc1/gdp*100), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title=subtitle_1,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limit = c(0, 25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+map_value_cc2_notitle <- 
+  data_rev_map %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = cost_cc2/gdp*100), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title=subtitle_2,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limit = c(0, 25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+
+map_value_who1_notitle <- 
+  data_rev_map %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = cost_who1/gdp*100), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title=subtitle_3,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0,10),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+
+map_value_who2_notitle <- 
+  data_rev_map %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = cost_who2/gdp*100), color = "black", size = 0.01) + 
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title=subtitle_4,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       oob = squish) +
+  facet_grid(~estimate)
+
+
+map_value_combined <- ggarrange(map_value_cc1_notitle, map_value_cc2_notitle, map_value_who1_notitle, map_value_who2_notitle,
+                        ncol = 1, nrow = 4)
+
+
+ggsave(filename = "fig9.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 12)
 
 ############################
 ##        TABLES          ##
@@ -643,6 +724,7 @@ rm(table2, table2_t)
 #################
 # Lower bounds
 
+rm(list = ls())
 
 # Loading IHME Global Burden of Disease Data
 data <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-1.csv"))
@@ -870,6 +952,7 @@ rm(table2, table2_t)
 #################
 # Upper bounds
 
+rm(list = ls())
 
 data <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-1.csv"))
 ihme_crosswalk <- read_excel(path = file.path(datapath, "ihme_crosswalk.xlsx")) %>% 
