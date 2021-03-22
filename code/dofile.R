@@ -21,11 +21,16 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(RColorBrewer)
-library(maps)
+library(sp)
+library(broom)
+library(sf)
 library(scales)
 library(viridis)
 library(data.table)
 library(ggpubr)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
 
 ######################
 ##       DATA       ##
@@ -308,18 +313,16 @@ data_global <- data_rev %>% filter(location_id == 1) %>% filter(measure_id == 2)
 ############################
 
 # Import map data
-world_map = map_data("world")
+world <- ne_countries(scale = "medium", returnclass = "sf")
+world$iso_code <- world$gu_a3
+world$iso_code[world$adm0_a3 == "SDS"] <- "SSD"
 
-# Add ISO codes to allow for accurate merging
-world_map_crosswalk <-  read.csv(file = file.path(datapath,"worldmap_crossover.csv"))
-world_map <- inner_join(world_map, world_map_crosswalk, by = "region")
-world_map <- world_map %>% filter(iso_code != "..") %>% select(!(c(6)))
 
 # Merging map and dataframe
-data_rev_map <- full_join(data_rev, world_map, by = "iso_code")
+data_rev_map <- full_join(world, data_rev, by = "iso_code")
 
 # Clean up
-rm(world_map_crosswalk, world_map)
+rm(world)
 
 # Re-order estimates: original, Vigo, Walker, composite
 data_rev_map$estimate <- factor(data_rev_map$estimate,      # Reordering group factor levels
@@ -339,13 +342,13 @@ caption <- "Source: Global Burden of Disease Study, Vigo et al. 2016, Walker et 
 ########################
 # Graphs
 
-# Deaths per capita
 
 map_deaths_per_cap <-
-  data_rev_map %>% filter(measure_id== "1") %>% 
+  data_rev_map %>% 
+  filter(measure_id== "1") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = rate_per_100k), color = "black", size = 0.01) + 
+  ggplot() +
+  geom_sf(mapping = aes(fill = rate_per_100k), color = "black", size = 0.01) +
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
@@ -368,8 +371,8 @@ ggsave(filename = "fig1.png", plot = last_plot(),
 map_dalys_per_cap <-
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = rate_per_100k), color = "black", size = 0.01) + 
+  ggplot() +
+  geom_sf(mapping = aes(fill = rate_per_100k), color = "black", size = 0.01) +
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
@@ -392,8 +395,8 @@ ggsave(filename = "fig2.png", plot = last_plot(),
 map_deaths_percent <-
   data_rev_map %>% filter(measure_id== "1") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = round(percent,0)), color = "black", size = 0.01) + 
+  ggplot() +
+  geom_sf(mapping = aes(fill = percent), color = "black", size = 0.01) +
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
@@ -419,8 +422,8 @@ ggsave(filename = "fig3.png", plot = last_plot(),
 map_dalys_percent <-
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = percent), color = "black", size = 0.01) + 
+  ggplot() +
+  geom_sf(mapping = aes(fill = percent), color = "black", size = 0.01) +
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
@@ -444,9 +447,9 @@ ggsave(filename = "fig4.png", plot = last_plot(),
 map_value_cc1 <- 
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = cost_cc1/gdp*100), color = "black", size = 0.01) + 
-  theme(panel.grid.major = element_blank(), 
+  ggplot() +
+  geom_sf(mapping = aes(fill = cost_cc1/gdp*100), color = "black", size = 0.01) +
+    theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
         axis.text = element_blank(),
@@ -470,8 +473,8 @@ ggsave(filename = "fig5.png", plot = last_plot(),
 map_value_cc2 <- 
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = cost_cc2/gdp*100), color = "black", size = 0.01) + 
+  ggplot() +
+  geom_sf(mapping = aes(fill = cost_cc2/gdp*100), color = "black", size = 0.01) +
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
@@ -496,8 +499,8 @@ ggsave(filename = "fig6.png", plot = last_plot(),
 map_value_who1 <- 
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = cost_who1/gdp*100), color = "black", size = 0.01) + 
+  ggplot() +
+  geom_sf(mapping = aes(fill = cost_who1/gdp*100), color = "black", size = 0.01) +
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
@@ -522,8 +525,8 @@ ggsave(filename = "fig7.png", plot = last_plot(),
 map_value_who2 <- 
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = cost_who2/gdp*100), color = "black", size = 0.01) + 
+  ggplot() +
+  geom_sf(mapping = aes(fill = cost_who2/gdp*100), color = "black", size = 0.01) +
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
@@ -548,8 +551,8 @@ ggsave(filename = "fig8.png", plot = last_plot(),
 map_value_cc1_notitle <- 
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = cost_cc1/gdp*100), color = "black", size = 0.01) + 
+  ggplot() +
+  geom_sf(mapping = aes(fill = cost_cc1/gdp*100), color = "black", size = 0.01) +
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
@@ -565,8 +568,8 @@ map_value_cc1_notitle <-
 map_value_cc2_notitle <- 
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = cost_cc2/gdp*100), color = "black", size = 0.01) + 
+  ggplot() +
+  geom_sf(mapping = aes(fill = cost_cc2/gdp*100), color = "black", size = 0.01) +
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
@@ -583,8 +586,8 @@ map_value_cc2_notitle <-
 map_value_who1_notitle <- 
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = cost_who1/gdp*100), color = "black", size = 0.01) + 
+  ggplot() +
+  geom_sf(mapping = aes(fill = cost_who1/gdp*100), color = "black", size = 0.01) +
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
@@ -601,8 +604,8 @@ map_value_who1_notitle <-
 map_value_who2_notitle <- 
   data_rev_map %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = cost_who2/gdp*100), color = "black", size = 0.01) + 
+  ggplot() +
+  geom_sf(mapping = aes(fill = cost_who2/gdp*100), color = "black", size = 0.01) +
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
         axis.title = element_blank(), 
@@ -622,7 +625,49 @@ map_value_combined <- ggarrange(map_value_cc1_notitle, map_value_cc2_notitle, ma
 ggsave(filename = "fig9.png", plot = last_plot(), 
        path = resultspath,
        width = 10,
-       height = 12)
+       height = 8)
+
+
+
+### Regions
+
+
+data_rev_map <- data_rev_map %>% group_by(estimate, measure_id, region_wb) %>% 
+  mutate(region_pop100k = sum(population_100k),
+         region_number = sum(number))
+
+data_rev_union <- data_rev_map %>% 
+  group_by(region_wb) %>% 
+  st_union() %>%
+  ungroup()
+
+map_region <- 
+  data_rev_map %>% 
+  filter(measure_id== "1") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_number/region_pop100k), color = NA) +
+  geom_sf(data = . %>%   group_by(region_wb) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Deaths due to mental disorders per 100,000",
+       subtitle="2019",
+       caption=caption,
+       fill="Deaths") +
+  scale_fill_distiller(palette = "RdYlBu") +
+  coord_sf(ndiscr = F) + 
+  facet_grid(~estimate) 
+
+ggsave(filename = "fig1_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 4)
+
+
 
 ############################
 ##        TABLES          ##
@@ -646,13 +691,14 @@ table1 <- data_rev %>% filter(estimate_id != 3) %>%
 
 # Adding regions
 region <- read_excel(path = file.path(datapath, "regions.xlsx"))
+region <- region %>% select (iso_code, continent, who_region, ihme_region)
 table1 <- left_join(table1, region, by = "iso_code")
 
-table1 <- table1 %>% group_by(region, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
+table1 <- table1 %>% group_by(continent, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
                                                                  region_dalymh = sum(number))
 
 table1$percent <- round(table1$region_dalymh/table1$region_dalytotal*100, 2)
-table1 <- table1 %>% ungroup() %>% select(measure_id, region, estimate, region_dalymh, percent) %>% unique()
+table1 <- table1 %>% ungroup() %>% select(measure_id, continent, estimate, region_dalymh, percent) %>% unique()
 table1$region_dalymh <- round(table1$region_dalymh/1000000,3)
 
 write.csv(table1, file = "results/table1_region_val.csv")
@@ -691,6 +737,35 @@ write.csv(table2_t, file = "results/table2_val.csv")
 rm(table2, table2_t)
 
 
+
+############################
+##         CHARTS           ##
+############################
+
+
+# Merging map and region data
+data_rev_map <- full_join(data_rev_map, region, by = "iso_code")
+
+
+data(nuts2006)
+
+
+# Titles, subtitles, and captions
+
+subtitle_1 <- "Value per DALY: $1,000"
+subtitle_2 <- "Value per DALY: $5,000"
+subtitle_3 <- "Value per DALY: GDP/capita"
+subtitle_4 <- "Value per DALY: 3 X GDP/capita"
+caption <- "Source: Global Burden of Disease Study, Vigo et al. 2016, Walker et al. 2015"
+
+########################
+# Graphs
+
+
+
+
+
+
 ############################################
 # TO DO
 
@@ -718,13 +793,12 @@ rm(table2, table2_t)
 #vsl_2019 <- vsl_2006 * gdp_deflator_2019 / gdp_deflator_2006
 #vsl <- vsl_2019
 #rm(vsl_2019, vsl_2006, gdp_deflator_2019, gdp_deflator_2006)
-
+#rm(list = ls())
 
 
 #################
 # Lower bounds
 
-rm(list = ls())
 
 # Loading IHME Global Burden of Disease Data
 data <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-1.csv"))
@@ -952,7 +1026,6 @@ rm(table2, table2_t)
 #################
 # Upper bounds
 
-rm(list = ls())
 
 data <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-1.csv"))
 ihme_crosswalk <- read_excel(path = file.path(datapath, "ihme_crosswalk.xlsx")) %>% 
