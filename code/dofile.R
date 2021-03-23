@@ -511,7 +511,7 @@ map_value_who1 <-
        caption=caption,
        fill="% of GDP") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,10),
+                       limits = c(0,25),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -537,6 +537,7 @@ map_value_who2 <-
        caption=caption,
        fill="% of GDP") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0,25),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -596,7 +597,7 @@ map_value_who1_notitle <-
   labs(title=subtitle_3,
        fill="% of GDP") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,10),
+                       limits = c(0,25),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -614,6 +615,7 @@ map_value_who2_notitle <-
   labs(title=subtitle_4,
        fill="% of GDP") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0,25),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -910,11 +912,13 @@ map_value_cc1_notitle_who_region <-
                        oob = squish) +
   facet_grid(~estimate)
 
+
+
 map_value_cc2_notitle_who_region <- 
   data_rev_who_region %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_cc2/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100 * 5), color = "white", size = 0.01) +
   geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
             summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
   theme(panel.grid.major = element_blank(), 
@@ -923,11 +927,13 @@ map_value_cc2_notitle_who_region <-
         axis.text = element_blank(),
         axis.ticks = element_blank()) +
   labs(title=subtitle_2,
+       
        fill="% of GDP") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
                        limit = c(0, 25),
                        oob = squish) +
   facet_grid(~estimate)
+
 
 
 map_value_who1_notitle_who_region <- 
@@ -943,6 +949,7 @@ map_value_who1_notitle_who_region <-
         axis.text = element_blank(),
         axis.ticks = element_blank()) +
   labs(title=subtitle_3,
+       
        fill="% of GDP") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
                        limits = c(0,25),
@@ -954,7 +961,7 @@ map_value_who2_notitle_who_region <-
   data_rev_who_region %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_who2/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100 * 3), color = "white", size = 0.01) +
   geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
             summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
   theme(panel.grid.major = element_blank(), 
@@ -978,6 +985,9 @@ ggsave(filename = "fig9_who_region.png", plot = last_plot(),
        path = resultspath,
        width = 10,
        height = 8)
+
+
+
 
 
 # IHME regions
@@ -1254,11 +1264,13 @@ map_value_cc1_notitle_ihme_region <-
                        oob = squish) +
   facet_grid(~estimate)
 
+
+
 map_value_cc2_notitle_ihme_region <- 
   data_rev_ihme_region %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_cc2/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100 * 5), color = "white", size = 0.01) +
   geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
             summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
   theme(panel.grid.major = element_blank(), 
@@ -1267,11 +1279,13 @@ map_value_cc2_notitle_ihme_region <-
         axis.text = element_blank(),
         axis.ticks = element_blank()) +
   labs(title=subtitle_2,
+
        fill="% of GDP") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
                        limit = c(0, 25),
                        oob = squish) +
   facet_grid(~estimate)
+
 
 
 map_value_who1_notitle_ihme_region <- 
@@ -1287,6 +1301,7 @@ map_value_who1_notitle_ihme_region <-
         axis.text = element_blank(),
         axis.ticks = element_blank()) +
   labs(title=subtitle_3,
+       
        fill="% of GDP") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
                        limits = c(0,25),
@@ -1298,7 +1313,7 @@ map_value_who2_notitle_ihme_region <-
   data_rev_ihme_region %>% filter(measure_id== "2") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100 *3), color = "white", size = 0.01) +
+  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100 * 3), color = "white", size = 0.01) +
   geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
             summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
   theme(panel.grid.major = element_blank(), 
@@ -1564,7 +1579,7 @@ data_rev <- data_rev %>% rename("Revised - Composite method" = composite)
 data_rev <- data_rev %>% relocate(12, .after = par)
 data_rev$cause_name <- "Mental disorders"
 data_rev <- data_rev %>% gather("estimate", "number", 11:14)
-rm(data_vigo, data_vigo_global, anxiety_cause_id, bipolar_cause_id, depressive_cause_id, inclusion, mental_disorder_cause_id, schizophrenia_cause_id, data_rev_composite)
+
 data_rev$estimate_id <- ifelse(data_rev$estimate == "Revised - Composite method", 4, 
                                ifelse(data_rev$estimate == "Revised - Walker et al. method", 3,
                                       ifelse(data_rev$estimate == "Revised - Vigo et al. method", 2, 1)))
@@ -1621,11 +1636,11 @@ table1 <- data_rev %>% filter(estimate_id != 3) %>%
 region <- read_excel(path = file.path(datapath, "regions.xlsx"))
 table1 <- left_join(table1, region, by = "iso_code")
 
-table1 <- table1 %>% group_by(region, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
+table1 <- table1 %>% group_by(continent, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
                                                                        region_dalymh = sum(number))
 
 table1$percent <- round(table1$region_dalymh/table1$region_dalytotal*100, 2)
-table1 <- table1 %>% ungroup() %>% select(measure_id, region, estimate, region_dalymh, percent) %>% unique()
+table1 <- table1 %>% ungroup() %>% select(measure_id, continent, estimate, region_dalymh, percent) %>% unique()
 table1$region_dalymh <- round(table1$region_dalymh/1000000,3)
 
 write.csv(table1, file = "results/table1_region_lower.csv")
@@ -1851,11 +1866,11 @@ table1 <- data_rev %>% filter(estimate_id != 3) %>%
 region <- read_excel(path = file.path(datapath, "regions.xlsx"))
 table1 <- left_join(table1, region, by = "iso_code")
 
-table1 <- table1 %>% group_by(region, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
+table1 <- table1 %>% group_by(continent, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
                                                                        region_dalymh = sum(number))
 
 table1$percent <- round(table1$region_dalymh/table1$region_dalytotal*100, 2)
-table1 <- table1 %>% ungroup() %>% select(measure_id, region, estimate, region_dalymh, percent) %>% unique()
+table1 <- table1 %>% ungroup() %>% select(measure_id, continent, estimate, region_dalymh, percent) %>% unique()
 table1$region_dalymh <- round(table1$region_dalymh/1000000,3)
 
 write.csv(table1, file = "results/table1_region_upper.csv")
