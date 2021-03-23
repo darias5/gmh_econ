@@ -629,25 +629,50 @@ ggsave(filename = "fig9.png", plot = last_plot(),
 
 
 
-### Regions
+### Region maps
 
+# Load in region data
+region <- read_excel(path = file.path(datapath, "regions.xlsx"))
 
-data_rev_map <- data_rev_map %>% group_by(estimate, measure_id, region_wb) %>% 
+# Merge
+region <- region %>% select (iso_code, who_region, ihme_region)
+
+data_rev_map_region <- full_join(data_rev_map, region, by = "iso_code")
+
+# WHO regions
+
+data_rev_who_region <- data_rev_map_region %>% group_by(estimate, measure_id, who_region) %>% 
   mutate(region_pop100k = sum(population_100k),
-         region_number = sum(number))
+         region_number = sum(number),
+         region_measure_total = sum(measure_total),
+         region_gdp = sum(gdp, na.rm=TRUE)
+  ) %>%
+  mutate(region_percent = region_number/region_measure_total*100,
+         region_population = region_pop100k * 100000)
 
-data_rev_union <- data_rev_map %>% 
-  group_by(region_wb) %>% 
-  st_union() %>%
-  ungroup()
+data_rev_who_region$region_gdp_per_capita <- data_rev_who_region$region_gdp/data_rev_who_region$region_population
 
-map_region <- 
-  data_rev_map %>% 
+data_rev_who_region$region_cost_cc1 <- ifelse(data_rev_who_region$measure_id == 2,
+                                              data_rev_who_region$region_number * 1000, 0)
+
+data_rev_who_region$region_cost_cc2 <- data_rev_who_region$cost_cc1 * 5
+
+data_rev_who_region$region_cost_who1 <-ifelse(data_rev_who_region$measure_id == 2,
+                                              data_rev_who_region$region_number * data_rev_who_region$region_gdp_per_capita, 0)
+
+data_rev_who_region$region_cost_who2 <- data_rev_who_region$region_cost_who1 * 3
+
+
+
+# Deaths per capita
+
+map_deaths_per_cap_who_region <- 
+  data_rev_who_region %>% 
   filter(measure_id== "1") %>% 
   filter(estimate_id %in% c(1,2,4)) %>% 
   ggplot() +
-  geom_sf(mapping = aes(fill = region_number/region_pop100k), color = NA) +
-  geom_sf(data = . %>%   group_by(region_wb) %>% st_set_precision(1e4) %>%
+  geom_sf(mapping = aes(fill = region_number/region_pop100k), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
             summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
   theme(panel.grid.major = element_blank(), 
         panel.background = element_blank(),
@@ -662,10 +687,641 @@ map_region <-
   coord_sf(ndiscr = F) + 
   facet_grid(~estimate) 
 
-ggsave(filename = "fig1_region.png", plot = last_plot(), 
+ggsave(filename = "fig1_who_region.png", plot = last_plot(), 
        path = resultspath,
        width = 10,
        height = 4)
+
+
+# DALYS per capita
+
+map_dalys_per_cap_who_region <-
+  data_rev_who_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_number/region_pop100k), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="DALYs due to mental disorders per 100,000",
+       subtitle="2019",
+       caption=caption,
+       fill="DALYs") +
+  scale_fill_distiller(palette = "RdYlBu") +
+  facet_grid(~estimate)
+
+ggsave(filename = "fig2_who_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 4)
+
+# Percent of deaths
+
+map_deaths_percent_who_region <-
+  data_rev_who_region %>% filter(measure_id== "1") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_percent), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Deaths due to mental disorders, % of deaths",
+       subtitle="2019",
+       caption=caption,
+       fill="Percent") +
+  scale_fill_distiller(palette = "YlGn",
+                       direction = 1,
+                       limits = c(0,10),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+ggsave(filename = "fig3_who_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 4)
+
+# Percent of DALYs
+
+map_dalys_percent_who_region <-
+  data_rev_who_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_percent), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="DALYs due to mental disorders, % of DALYs",
+       subtitle="2019",
+       caption=caption,
+       fill="Percent") +
+  scale_fill_distiller(palette = "YlGn",
+                       direction = 1) + 
+  facet_grid(~estimate)
+
+ggsave(filename = "fig4_who_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 4)
+
+
+# Value (CC1), % of GDP
+
+map_value_cc1_who_region <- 
+  data_rev_who_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle=subtitle_1,
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limit = c(0, 25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+ggsave(filename = "fig5_who_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 3)
+
+# Value (CC2), % of GDP
+
+
+map_value_cc2_who_region <- 
+  data_rev_who_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100 * 5), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle=subtitle_2,
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limit = c(0, 25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+ggsave(filename = "fig6_who_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 3)
+
+# Value (WHO1), % of GDP
+
+map_value_who1_who_region <- 
+  data_rev_who_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle=subtitle_3,
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0,25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+ggsave(filename = "fig7_who_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 3)
+
+# Value (WHO2), % of GDP
+
+map_value_who2_who_region <- 
+  data_rev_who_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_who2/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle=subtitle_4,
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0,25),
+                       oob = squish) +
+  facet_grid(~estimate)
+ggsave(filename = "fig8_who_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 3)
+
+# Combined value maps
+
+
+map_value_cc1_notitle_who_region <- 
+  data_rev_who_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title=subtitle_1,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limit = c(0, 25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+map_value_cc2_notitle_who_region <- 
+  data_rev_who_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_cc2/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title=subtitle_2,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limit = c(0, 25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+
+map_value_who1_notitle_who_region <- 
+  data_rev_who_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title=subtitle_3,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0,25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+
+map_value_who2_notitle_who_region <- 
+  data_rev_who_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_who2/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title=subtitle_4,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0,25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+
+map_value_combined <- ggarrange(map_value_cc1_notitle_who_region, map_value_cc2_notitle_who_region, map_value_who1_notitle_who_region, map_value_who2_notitle_who_region,
+                                ncol = 1, nrow = 4)
+
+
+ggsave(filename = "fig9_who_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 8)
+
+
+# IHME regions
+
+
+
+data_rev_ihme_region <- data_rev_map_region %>% group_by(estimate, measure_id, ihme_region) %>% 
+  mutate(region_pop100k = sum(population_100k, na.rm=TRUE),
+         region_number = sum(number),
+         region_measure_total = sum(measure_total),
+         region_gdp = sum(gdp, na.rm=TRUE)
+  ) %>%
+  mutate(region_percent = region_number/region_measure_total*100,
+         region_population = region_pop100k * 100000)
+
+data_rev_ihme_region$region_gdp_per_capita <- data_rev_ihme_region$region_gdp/data_rev_ihme_region$region_population
+
+data_rev_ihme_region$region_cost_cc1 <- ifelse(data_rev_ihme_region$measure_id == 2,
+                                              data_rev_ihme_region$region_number * 1000, 0)
+
+data_rev_ihme_region$region_cost_cc2 <- data_rev_ihme_region$cost_cc1 * 5
+
+data_rev_ihme_region$region_cost_who1 <-ifelse(data_rev_ihme_region$measure_id == 2,
+                                              data_rev_ihme_region$region_number * data_rev_ihme_region$region_gdp_per_capita, 0)
+
+data_rev_ihme_region$region_cost_who2 <- data_rev_ihme_region$region_cost_who1 * 3
+
+
+
+# Deaths per capita
+
+map_deaths_per_cap_ihme_region <- 
+  data_rev_ihme_region %>% 
+  filter(measure_id== "1") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_number/region_pop100k), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Deaths due to mental disorders per 100,000",
+       subtitle="2019",
+       caption=caption,
+       fill="Deaths") +
+  scale_fill_distiller(palette = "RdYlBu") +
+  coord_sf(ndiscr = F) + 
+  facet_grid(~estimate) 
+
+ggsave(filename = "fig1_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 4)
+
+
+# DALYS per capita
+
+map_dalys_per_cap_ihme_region <-
+  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_number/region_pop100k), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="DALYs due to mental disorders per 100,000",
+       subtitle="2019",
+       caption=caption,
+       fill="DALYs") +
+  scale_fill_distiller(palette = "RdYlBu") +
+  facet_grid(~estimate)
+
+ggsave(filename = "fig2_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 4)
+
+# Percent of deaths
+
+map_deaths_percent_ihme_region <-
+  data_rev_ihme_region %>% filter(measure_id== "1") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_percent), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Deaths due to mental disorders, % of deaths",
+       subtitle="2019",
+       caption=caption,
+       fill="Percent") +
+  scale_fill_distiller(palette = "YlGn",
+                       direction = 1,
+                       limits = c(0,10),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+ggsave(filename = "fig3_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 4)
+
+# Percent of DALYs
+
+map_dalys_percent_ihme_region <-
+  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_percent), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="DALYs due to mental disorders, % of DALYs",
+       subtitle="2019",
+       caption=caption,
+       fill="Percent") +
+  scale_fill_distiller(palette = "YlGn",
+                       direction = 1) + 
+  facet_grid(~estimate)
+
+ggsave(filename = "fig4_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 4)
+
+
+# Value (CC1), % of GDP
+
+map_value_cc1_ihme_region <- 
+  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle=subtitle_1,
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limit = c(0, 25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+ggsave(filename = "fig5_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 3)
+
+# Value (CC2), % of GDP
+
+
+map_value_cc2_ihme_region <- 
+  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100 * 5), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle=subtitle_2,
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limit = c(0, 25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+ggsave(filename = "fig6_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 3)
+
+# Value (WHO1), % of GDP
+
+map_value_who1_ihme_region <- 
+  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle=subtitle_3,
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0,25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+ggsave(filename = "fig7_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 3)
+
+# Value (WHO2), % of GDP
+
+map_value_who2_ihme_region <- 
+  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100 * 3), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle=subtitle_4,
+       caption=caption,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0,25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+ggsave(filename = "fig8_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 3)
+
+# Combined value maps
+
+
+map_value_cc1_notitle_ihme_region <- 
+  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title=subtitle_1,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limit = c(0, 25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+map_value_cc2_notitle_ihme_region <- 
+  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_cc2/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title=subtitle_2,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limit = c(0, 25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+
+map_value_who1_notitle_ihme_region <- 
+  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title=subtitle_3,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0,25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+
+map_value_who2_notitle_ihme_region <- 
+  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
+  filter(estimate_id %in% c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100 *3), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title=subtitle_4,
+       fill="% of GDP") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0,25),
+                       oob = squish) +
+  facet_grid(~estimate)
+
+
+map_value_combined <- ggarrange(map_value_cc1_notitle_ihme_region, map_value_cc2_notitle_ihme_region, map_value_who1_notitle_ihme_region, map_value_who2_notitle_ihme_region,
+                                ncol = 1, nrow = 4)
+
+
+ggsave(filename = "fig9_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 8)
 
 
 
@@ -743,23 +1399,7 @@ rm(table2, table2_t)
 ############################
 
 
-# Merging map and region data
-data_rev_map <- full_join(data_rev_map, region, by = "iso_code")
 
-
-data(nuts2006)
-
-
-# Titles, subtitles, and captions
-
-subtitle_1 <- "Value per DALY: $1,000"
-subtitle_2 <- "Value per DALY: $5,000"
-subtitle_3 <- "Value per DALY: GDP/capita"
-subtitle_4 <- "Value per DALY: 3 X GDP/capita"
-caption <- "Source: Global Burden of Disease Study, Vigo et al. 2016, Walker et al. 2015"
-
-########################
-# Graphs
 
 
 
