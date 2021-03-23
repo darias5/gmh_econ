@@ -1,17 +1,17 @@
 "","measure_id","estimate","number","percent"
 "1",1,"Original GBD method",0,0
-"2",2,"Original GBD method",163.178,5.81
-"3",3,"Original GBD method",163.162,14.74
-"4",4,"Original GBD method",0.021,0
-"5",1,"Revised - Vigo et al. method",5.611,9.48
-"6",2,"Revised - Vigo et al. method",468.55,16.67
-"7",3,"Revised - Vigo et al. method",375.853,33.95
-"8",4,"Revised - Vigo et al. method",96.472,5.33
-"9",1,"Revised - Walker et al. method",4.736,8
-"10",2,"Revised - Walker et al. method",224.79,8
-"11",3,"Revised - Walker et al. method",88.549,8
-"12",4,"Revised - Walker et al. method",144.911,8
-"13",1,"Revised - Composite method",4.736,8
-"14",2,"Revised - Composite method",520.764,18.53
-"15",3,"Revised - Composite method",375.853,33.95
-"16",4,"Revised - Composite method",144.911,8
+"2",2,"Original GBD method",125.311,4.94
+"3",3,"Original GBD method",125.294,14.55
+"4",4,"Original GBD method",0.017,0
+"5",1,"Revised - Vigo et al. method",2.899,5.13
+"6",2,"Revised - Vigo et al. method",300.727,11.85
+"7",3,"Revised - Vigo et al. method",238.312,27.68
+"8",4,"Revised - Vigo et al. method",62.415,3.72
+"9",1,"Revised - Walker et al. method",4.05,7.16
+"10",2,"Revised - Walker et al. method",181.84,7.16
+"11",3,"Revised - Walker et al. method",61.686,7.16
+"12",4,"Revised - Walker et al. method",120.155,7.16
+"13",1,"Revised - Composite method",4.05,7.16
+"14",2,"Revised - Composite method",358.466,14.12
+"15",3,"Revised - Composite method",238.312,27.68
+"16",4,"Revised - Composite method",120.155,7.16

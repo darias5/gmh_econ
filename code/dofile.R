@@ -337,7 +337,7 @@ subtitle_1 <- "Value per DALY: $1,000"
 subtitle_2 <- "Value per DALY: $5,000"
 subtitle_3 <- "Value per DALY: GDP/capita"
 subtitle_4 <- "Value per DALY: 3 X GDP/capita"
-caption <- "Source: Global Burden of Disease Study, Vigo et al. 2016, Walker et al. 2015"
+caption <- "Source: Global Burden of Disease Study, Vigo et al. 2016"
 
 ########################
 # Graphs
@@ -358,7 +358,9 @@ map_deaths_per_cap <-
        subtitle="2019",
        caption=caption,
        fill="Deaths") +
-  scale_fill_distiller(palette = "RdYlBu") +
+  scale_fill_distiller(palette = "RdYlBu",
+                       limits = c(0,100),
+                       oob = squish) +
   facet_grid(~estimate)
 
 ggsave(filename = "fig1.png", plot = last_plot(), 
@@ -382,7 +384,9 @@ map_dalys_per_cap <-
        subtitle="2019",
        caption=caption,
        fill="DALYs") +
-  scale_fill_distiller(palette = "RdYlBu") +
+  scale_fill_distiller(palette = "RdYlBu",
+                       limits = c(0,6000),
+                       oob = squish) +
   facet_grid(~estimate)
 
 ggsave(filename = "fig2.png", plot = last_plot(), 
@@ -408,7 +412,7 @@ map_deaths_percent <-
        fill="Percent") +
   scale_fill_distiller(palette = "YlGn",
                        direction = 1,
-                       limits = c(0,10),
+                       limits = c(0,15),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -434,7 +438,9 @@ map_dalys_percent <-
        caption=caption,
        fill="Percent") +
   scale_fill_distiller(palette = "YlGn",
-                       direction = 1) + 
+                       direction = 1,
+                       limits = c(0,25),
+                       oob = squish) +
   facet_grid(~estimate)
 
 ggsave(filename = "fig4.png", plot = last_plot(), 
@@ -657,7 +663,7 @@ data_rev_who_region$region_gdp_per_capita <- data_rev_who_region$region_gdp/data
 data_rev_who_region$region_cost_cc1 <- ifelse(data_rev_who_region$measure_id == 2,
                                               data_rev_who_region$region_number * 1000, 0)
 
-data_rev_who_region$region_cost_cc2 <- data_rev_who_region$cost_cc1 * 5
+data_rev_who_region$region_cost_cc2 <- data_rev_who_region$region_cost_cc1 * 5
 
 data_rev_who_region$region_cost_who1 <-ifelse(data_rev_who_region$measure_id == 2,
                                               data_rev_who_region$region_number * data_rev_who_region$region_gdp_per_capita, 0)
@@ -685,7 +691,9 @@ map_deaths_per_cap_who_region <-
        subtitle="2019",
        caption=caption,
        fill="Deaths") +
-  scale_fill_distiller(palette = "RdYlBu") +
+  scale_fill_distiller(palette = "RdYlBu",
+                       limits = c(0,100),
+                       oob = squish) +
   coord_sf(ndiscr = F) + 
   facet_grid(~estimate) 
 
@@ -713,7 +721,9 @@ map_dalys_per_cap_who_region <-
        subtitle="2019",
        caption=caption,
        fill="DALYs") +
-  scale_fill_distiller(palette = "RdYlBu") +
+  scale_fill_distiller(palette = "RdYlBu",
+                       limits = c(0,6000),
+                       oob = squish) +
   facet_grid(~estimate)
 
 ggsave(filename = "fig2_who_region.png", plot = last_plot(), 
@@ -741,7 +751,7 @@ map_deaths_percent_who_region <-
        fill="Percent") +
   scale_fill_distiller(palette = "YlGn",
                        direction = 1,
-                       limits = c(0,10),
+                       limits = c(0,15),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -769,7 +779,9 @@ map_dalys_percent_who_region <-
        caption=caption,
        fill="Percent") +
   scale_fill_distiller(palette = "YlGn",
-                       direction = 1) + 
+                       direction = 1,
+                       limits = c(0,25),
+                       oob = squish) +
   facet_grid(~estimate)
 
 ggsave(filename = "fig4_who_region.png", plot = last_plot(), 
@@ -1008,7 +1020,7 @@ data_rev_ihme_region$region_gdp_per_capita <- data_rev_ihme_region$region_gdp/da
 data_rev_ihme_region$region_cost_cc1 <- ifelse(data_rev_ihme_region$measure_id == 2,
                                               data_rev_ihme_region$region_number * 1000, 0)
 
-data_rev_ihme_region$region_cost_cc2 <- data_rev_ihme_region$cost_cc1 * 5
+data_rev_ihme_region$region_cost_cc2 <- data_rev_ihme_region$region_cost_cc1 * 5
 
 data_rev_ihme_region$region_cost_who1 <-ifelse(data_rev_ihme_region$measure_id == 2,
                                               data_rev_ihme_region$region_number * data_rev_ihme_region$region_gdp_per_capita, 0)
@@ -1036,7 +1048,9 @@ map_deaths_per_cap_ihme_region <-
        subtitle="2019",
        caption=caption,
        fill="Deaths") +
-  scale_fill_distiller(palette = "RdYlBu") +
+  scale_fill_distiller(palette = "RdYlBu",
+                       limits = c(0,100),
+                       oob = squish) +
   coord_sf(ndiscr = F) + 
   facet_grid(~estimate) 
 
@@ -1064,7 +1078,9 @@ map_dalys_per_cap_ihme_region <-
        subtitle="2019",
        caption=caption,
        fill="DALYs") +
-  scale_fill_distiller(palette = "RdYlBu") +
+  scale_fill_distiller(palette = "RdYlBu",
+                       limits = c(0,6000),
+                       oob = squish) +
   facet_grid(~estimate)
 
 ggsave(filename = "fig2_ihme_region.png", plot = last_plot(), 
@@ -1092,7 +1108,7 @@ map_deaths_percent_ihme_region <-
        fill="Percent") +
   scale_fill_distiller(palette = "YlGn",
                        direction = 1,
-                       limits = c(0,10),
+                       limits = c(0,15),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -1120,7 +1136,9 @@ map_dalys_percent_ihme_region <-
        caption=caption,
        fill="Percent") +
   scale_fill_distiller(palette = "YlGn",
-                       direction = 1) + 
+                       direction = 1,
+                       limits = c(0,25),
+                       oob = squish) +
   facet_grid(~estimate)
 
 ggsave(filename = "fig4_ihme_region.png", plot = last_plot(), 
@@ -1365,11 +1383,11 @@ region <- read_excel(path = file.path(datapath, "regions.xlsx"))
 region <- region %>% select (iso_code, continent, who_region, ihme_region)
 table1 <- left_join(table1, region, by = "iso_code")
 
-table1 <- table1 %>% group_by(continent, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
+table1 <- table1 %>% group_by(who_region, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
                                                                  region_dalymh = sum(number))
 
 table1$percent <- round(table1$region_dalymh/table1$region_dalytotal*100, 2)
-table1 <- table1 %>% ungroup() %>% select(measure_id, continent, estimate, region_dalymh, percent) %>% unique()
+table1 <- table1 %>% ungroup() %>% select(measure_id, who_region, estimate, region_dalymh, percent) %>% unique()
 table1$region_dalymh <- round(table1$region_dalymh/1000000,3)
 
 write.csv(table1, file = "results/table1_region_val.csv")
@@ -1414,12 +1432,122 @@ rm(table2, table2_t)
 ############################
 
 
+data_rev_who_region_1 <- data_rev_who_region %>% select(c(estimate, estimate_id, measure_id, who_region, region_pop100k:region_cost_who2)) %>% st_drop_geometry()
+data_rev_who_region_1 <- data_rev_who_region_1  %>% filter(estimate_id %in% c(1,2,4)) %>% unique()
+
+
+chart_1_who_region <- 
+  
+  data_rev_who_region_1 %>% 
+  filter(measure_id== "2") %>% 
+  filter(!is.na(who_region)) %>%
+  ggplot(aes(x = who_region, fill=who_region, y=region_percent)) +
+  geom_bar(stat="identity")+
+  labs(title="DALYs due to mental disorders, % of DALYs",
+       subtitle="2019",
+       caption=caption,
+       x = "",
+       y = "Percent of DALYs",
+       fill="Region") +
+  facet_grid(~estimate) + 
+  theme(panel.grid.major.y =  element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) 
+
+
+ggsave(filename = "fig10_who_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 8)
+
+
+chart_2_who_region <- 
+
+  data_rev_who_region_1 %>% 
+  filter(measure_id== "1") %>% 
+  filter(!is.na(who_region)) %>%
+  ggplot(aes(x = who_region, fill=who_region, y=region_percent)) +
+  geom_bar(stat="identity")+
+  labs(title="Deaths due to mental disorders, % of deaths",
+       subtitle="2019",
+       caption=caption,
+       x = "",
+       y = "Percent of deaths",
+       fill="Region") +
+  facet_grid(~estimate) + 
+  theme(panel.grid.major.y =  element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) 
+
+
+ggsave(filename = "fig11_who_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 8)
 
 
 
 
+data_rev_ihme_region_1 <- data_rev_ihme_region %>% select(c(estimate, estimate_id, measure_id, ihme_region, region_pop100k:region_cost_who2)) %>% st_drop_geometry()
+data_rev_ihme_region_1 <- data_rev_ihme_region_1  %>% filter(estimate_id %in% c(1,2,4)) %>% unique()
 
 
+chart_1_ihme_region <- 
+  
+  data_rev_ihme_region_1 %>% 
+  filter(measure_id== "2") %>% 
+  filter(!is.na(ihme_region)) %>%
+  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_percent)) +
+  geom_bar(stat="identity")+
+  labs(title="DALYs due to mental disorders, % of DALYs",
+       subtitle="2019",
+       caption=caption,
+       x = "",
+       y = "Percent of DALYs",
+       fill="Region") +
+  facet_grid(~estimate) + 
+  theme(panel.grid.major.y =  element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) 
+
+
+ggsave(filename = "fig10_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 8)
+
+
+chart_2_ihme_region <- 
+  
+  data_rev_ihme_region_1 %>% 
+  filter(measure_id== "1") %>% 
+  filter(!is.na(ihme_region)) %>%
+  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_percent)) +
+  geom_bar(stat="identity")+
+  labs(title="Deaths due to mental disorders, % of deaths",
+       subtitle="2019",
+       caption=caption,
+       x = "",
+       y = "Percent of deaths",
+       fill="Region") +
+  facet_grid(~estimate) + 
+  theme(panel.grid.major.y =  element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) 
+
+
+ggsave(filename = "fig11_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 8)
 
 ############################################
 # TO DO
@@ -1430,13 +1558,11 @@ rm(table2, table2_t)
 # Method 5: Bloom et al.
 # Method 6: Lancet 
 # Consider filtering out islands to reduce visual clutter
-# See if there's a fix for Western Sahara
 # Figure out adjustment for scale to account for out of bounds in labeling
 # Proofread code
 # Clean up sensitivty analysis
 # Make Table 1 easier to replicate
 # Incorporate sensitivity analysis within this
-# Do more grouping
 # Gather a few studies that focus on NCDs (cancers, CVD, etc.) and risk of death due to mental disorders
 # 
 
@@ -1636,11 +1762,11 @@ table1 <- data_rev %>% filter(estimate_id != 3) %>%
 region <- read_excel(path = file.path(datapath, "regions.xlsx"))
 table1 <- left_join(table1, region, by = "iso_code")
 
-table1 <- table1 %>% group_by(continent, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
+table1 <- table1 %>% group_by(who_region, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
                                                                        region_dalymh = sum(number))
 
 table1$percent <- round(table1$region_dalymh/table1$region_dalytotal*100, 2)
-table1 <- table1 %>% ungroup() %>% select(measure_id, continent, estimate, region_dalymh, percent) %>% unique()
+table1 <- table1 %>% ungroup() %>% select(measure_id, who_region, estimate, region_dalymh, percent) %>% unique()
 table1$region_dalymh <- round(table1$region_dalymh/1000000,3)
 
 write.csv(table1, file = "results/table1_region_lower.csv")
@@ -1866,11 +1992,11 @@ table1 <- data_rev %>% filter(estimate_id != 3) %>%
 region <- read_excel(path = file.path(datapath, "regions.xlsx"))
 table1 <- left_join(table1, region, by = "iso_code")
 
-table1 <- table1 %>% group_by(continent, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
+table1 <- table1 %>% group_by(who_region, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
                                                                        region_dalymh = sum(number))
 
 table1$percent <- round(table1$region_dalymh/table1$region_dalytotal*100, 2)
-table1 <- table1 %>% ungroup() %>% select(measure_id, continent, estimate, region_dalymh, percent) %>% unique()
+table1 <- table1 %>% ungroup() %>% select(measure_id, who_region, estimate, region_dalymh, percent) %>% unique()
 table1$region_dalymh <- round(table1$region_dalymh/1000000,3)
 
 write.csv(table1, file = "results/table1_region_upper.csv")
