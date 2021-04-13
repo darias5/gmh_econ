@@ -1490,17 +1490,53 @@ ggsave(filename = "fig11_who_region.png", plot = last_plot(),
        height = 8)
 
 
+chart_3_who_region <- 
+  
+  data_rev_who_region_1 %>% 
+  filter(measure_id== "2") %>% 
+  filter(!is.na(who_region)) %>%
+  ggplot(aes(x = who_region, fill=who_region, y=region_cost_who1/region_gdp*100)) +
+  geom_bar(stat="identity")+
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle="Value per DALY: GDP/capita",
+       caption=caption,
+       x = "",
+       y = "Percent of GDP",
+       fill="Region") +
+  facet_grid(~estimate) + 
+  theme(panel.grid.major.y =  element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  geom_text(aes(label=round(region_cost_who1/region_gdp*100,1)), vjust=1.6, color="black", size=3.5)
+
+
+ggsave(filename = "fig12_who_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 8)
 
 
 data_rev_ihme_region_1 <- data_rev_ihme_region %>% select(c(estimate, estimate_id, measure_id, ihme_region, region_pop100k:region_cost_who2)) %>% st_drop_geometry()
 data_rev_ihme_region_1 <- data_rev_ihme_region_1  %>% filter(estimate_id %in% c(1,2,4)) %>% unique()
 
+ihme_positions <- c("East Asia", "Southeast Asia", "Oceania", "Central Asia", "Eastern Europe", "Central Europe",
+                    "Caribbean", "Central Latin America", "Tropical Latin America", "Andean Latin America", "North Africa and Middle East",
+                    "Southern Sub-Saharan Africa", "Western Sub-Saharan Africa", "Central Sub-Saharan Africa", "Eastern Sub-Saharan Africa",
+                    "South Asia", "Southern Latin America", "Western Europe", "High-income North America",
+                    "Australasia", "High-income Asia Pacific", "#NA")
+
+ihme_pal <- c("#8C95F1", "#D7ECFC" , "#B6CDD4", "#EAA144", "#F3DA89", "#F9EFC2", "#B1F585", "#B6F2D5",
+              "#E3FD8C", "#E2FDD7", "#99ACA4", "#9D5F56", "#E989A9", "#F5DBD8", "#F8EEEF",
+              "#F4FF7C", "#C42AF1", "#E986F8", "#D7C2FC", "#DD9BE9", "#FAE5FE", "#7F7F7F")
 
 chart_1_ihme_region <- 
   
   data_rev_ihme_region_1 %>% 
   filter(measure_id== "2") %>% 
   filter(!is.na(ihme_region)) %>%
+  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
   ggplot(aes(x = ihme_region, fill=ihme_region, y=region_percent)) +
   geom_bar(stat="identity")+
   labs(title="DALYs due to mental disorders, % of DALYs",
@@ -1514,7 +1550,8 @@ chart_1_ihme_region <-
         panel.background = element_blank(),
         axis.title = element_blank(), 
         axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) 
+        axis.ticks.x = element_blank())  + 
+  scale_fill_manual(name = "Region", values = ihme_pal)
 
 
 ggsave(filename = "fig10_ihme_region.png", plot = last_plot(), 
@@ -1528,6 +1565,7 @@ chart_2_ihme_region <-
   data_rev_ihme_region_1 %>% 
   filter(measure_id== "1") %>% 
   filter(!is.na(ihme_region)) %>%
+  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
   ggplot(aes(x = ihme_region, fill=ihme_region, y=region_percent)) +
   geom_bar(stat="identity")+
   labs(title="Deaths due to mental disorders, % of deaths",
@@ -1541,13 +1579,45 @@ chart_2_ihme_region <-
         panel.background = element_blank(),
         axis.title = element_blank(), 
         axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) 
+        axis.ticks.x = element_blank())  + 
+  scale_fill_manual(name = "Region", values = ihme_pal)
 
 
 ggsave(filename = "fig11_ihme_region.png", plot = last_plot(), 
        path = resultspath,
        width = 10,
        height = 8)
+
+
+
+chart_3_ihme_region <- 
+  
+  data_rev_ihme_region_1 %>% 
+  filter(measure_id== "2") %>% 
+  filter(!is.na(ihme_region)) %>%
+  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
+  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_cost_who1/region_gdp*100)) +
+  geom_bar(stat="identity")+
+  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
+       subtitle="Value per DALY: GDP/capita",
+       caption=caption,
+       x = "",
+       y = "Percent of GDP") +
+  facet_grid(~estimate) + 
+  theme(panel.grid.major.y =  element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  geom_text(aes(label=round(region_cost_who1/region_gdp*100,1)), vjust=1.6, color="black", size=2) + 
+  scale_fill_manual(name = "Region", values = ihme_pal)
+                      
+
+
+ggsave(filename = "fig12_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 13,
+       height = 4)
 
 ############################################
 # TO DO
