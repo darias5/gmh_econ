@@ -1619,6 +1619,108 @@ ggsave(filename = "fig12_ihme_region.png", plot = last_plot(),
        width = 13,
        height = 4)
 
+chart_3_cc1_notitle_ihme_region <- 
+  
+  data_rev_ihme_region_1 %>% 
+  filter(measure_id== "2") %>% 
+  filter(!is.na(ihme_region)) %>%
+  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
+  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_cost_cc1/region_gdp*100)) +
+  geom_bar(stat="identity")+
+  labs(title="Value per DALY: $1,000",
+       x = "",
+       y = "Percent of GDP") +
+  facet_grid(~estimate) + 
+  theme(panel.grid.major.y =  element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  geom_text(aes(label=round(region_cost_cc1/region_gdp*100,1)), vjust=1.6, color="black", size=2) + 
+  coord_cartesian(ylim = c(0, 25)) + 
+  scale_fill_manual(name = "Region", values = ihme_pal)
+
+chart_3_cc2_notitle_ihme_region <- 
+  
+  data_rev_ihme_region_1 %>% 
+  filter(measure_id== "2") %>% 
+  filter(!is.na(ihme_region)) %>%
+  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
+  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_cost_cc2/region_gdp*100)) +
+  geom_bar(stat="identity")+
+  labs(title="Value per DALY: $5,000",
+       x = "",
+       y = "Percent of GDP") +
+  facet_grid(~estimate) + 
+  theme(panel.grid.major.y =  element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  geom_text(aes(label=round(region_cost_cc2/region_gdp*100,1)), vjust=1.6, color="black", size=2) + 
+  coord_cartesian(ylim = c(0, 25)) + 
+  scale_fill_manual(name = "Region", values = ihme_pal)
+
+
+
+chart_3_who1_notitle_ihme_region <- 
+  
+  data_rev_ihme_region_1 %>% 
+  filter(measure_id== "2") %>% 
+  filter(!is.na(ihme_region)) %>%
+  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
+  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_cost_who1/region_gdp*100)) +
+  geom_bar(stat="identity")+
+  labs(title="Value per DALY: GDP/capita",
+       x = "",
+       y = "Percent of GDP") +
+  facet_grid(~estimate) + 
+  theme(panel.grid.major.y =  element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  geom_text(aes(label=round(region_cost_who1/region_gdp*100,1)), vjust=1.6, color="black", size=2) + 
+  coord_cartesian(ylim = c(0, 25)) + 
+  scale_fill_manual(name = "Region", values = ihme_pal)
+
+chart_3_who2_notitle_ihme_region <- 
+  
+  data_rev_ihme_region_1 %>% 
+  filter(measure_id== "2") %>% 
+  filter(!is.na(ihme_region)) %>%
+  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
+  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_cost_who2/region_gdp*100)) +
+  geom_bar(stat="identity")+
+  labs(title="Value per DALY: 3 X GDP/capita",
+       x = "",
+       y = "Percent of GDP") +
+  facet_grid(~estimate) + 
+  theme(panel.grid.major.y =  element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  geom_text(aes(label=round(region_cost_who2/region_gdp*100,1)), vjust=1.6, color="black", size=2) + 
+  coord_cartesian(ylim = c(0, 25)) + 
+  scale_fill_manual(name = "Region", values = ihme_pal)
+
+
+
+combo_chart_3_notitle_ihme_region <- ggarrange(chart_3_cc1_notitle_ihme_region,
+                                chart_3_cc2_notitle_ihme_region,
+                                chart_3_who1_notitle_ihme_region,
+                                chart_3_who2_notitle_ihme_region,
+                                common.legend = TRUE,
+                                legend = "bottom",
+                                ncol = 1, nrow = 4)
+
+
+ggsave(filename = "fig13_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 13,
+       height = 16)
+
 ############################################
 # TO DO
 
