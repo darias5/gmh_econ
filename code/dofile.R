@@ -1721,6 +1721,58 @@ ggsave(filename = "fig13_ihme_region.png", plot = last_plot(),
        width = 13,
        height = 16)
 
+data_rev_ihme_inputs <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-inputs.csv"))
+data_rev_ihme_inputs <- data_rev_ihme_inputs %>% gather(inputs_mental:inputs_all,key = "input", value = "count")
+
+chart_4_gbdinputs_ihme_region_percent <- 
+  data_rev_ihme_inputs %>% 
+  filter(!ihme_region %in% c("Global", "Other/Duplicates")) %>%
+  filter(input != "inputs_all") %>%
+  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
+  ggplot(aes(x = input, fill=ihme_region, y=count)) +
+  geom_bar(position = "fill", stat="identity")+
+  theme(panel.grid.major.y =  element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.ticks.x = element_blank()) +
+  ggtitle("Share of cause-specific inputs") +
+  scale_fill_manual(name = "Region", values = ihme_pal) + 
+  scale_x_discrete(limit = c("inputs_mental", "inputs_maternal"),
+                     labels = c(
+                       
+                       expression(paste("Mental disorders \n         (n=2870)" )),
+                       expression(paste("Maternal and neonatal disorders \n                    (n=6149)" ))))
+
+chart_4_gbdinputs_ihme_region_stacked <- 
+  data_rev_ihme_inputs %>% 
+  filter(!ihme_region %in% c("Global", "Other/Duplicates")) %>%
+  filter(input != "inputs_all") %>%
+  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
+  ggplot(aes(x = input, fill=ihme_region, y=count)) +
+  geom_bar(position = "stack", stat="identity")+
+  theme(panel.grid.major.y =  element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.ticks.x = element_blank()) +
+  ggtitle("Number of cause-specific inputs") +
+  scale_fill_manual(name = "Region", values = ihme_pal) + 
+  scale_x_discrete(limit = c("inputs_mental", "inputs_maternal"),
+                   labels = c(
+                     
+                     expression(paste("Mental disorders \n         (n=2870)" )),
+                     expression(paste("Maternal and neonatal disorders \n                    (n=6149)" ))))
+
+combo_chart_4_gbdinputs_ihme_region <- ggarrange(chart_4_gbdinputs_ihme_region_stacked,
+                                                 chart_4_gbdinputs_ihme_region_percent,
+                                               common.legend = TRUE,
+                                               legend = "bottom",
+                                               ncol = 2, nrow = 1)
+
+
+ ggsave(filename = "fig14_ihme_region.png", plot = last_plot(), 
+        path = resultspath,
+        width = 13,
+        height = 8)
 ############################################
 # TO DO
 
