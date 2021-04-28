@@ -1,8 +1,8 @@
 ##################################################################
 #
-# Re-evaluating the Global Economic Burden of Mental Illness
+# ESTIMATING THE GLOBAL ECONOMIC BURDEN OF MENTAL ILLNESS 
 # Daniel Arias, PhD Student, Population Health Sciences
-# November 23, 2020
+# April 27, 2020
 #
 ##################################################################
 
@@ -439,7 +439,7 @@ map_dalys_percent <-
        fill="Percent") +
   scale_fill_distiller(palette = "YlGn",
                        direction = 1,
-                       limits = c(0,25),
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -464,8 +464,8 @@ map_value_cc1 <-
        subtitle=subtitle_1,
        caption=caption,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limit = c(0, 25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limit = c(0, 20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -490,8 +490,8 @@ map_value_cc2 <-
        subtitle=subtitle_2,
        caption=caption,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limit = c(0, 25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limit = c(0, 20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -516,8 +516,8 @@ map_value_who1 <-
        subtitle=subtitle_3,
        caption=caption,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -542,8 +542,8 @@ map_value_who2 <-
        subtitle=subtitle_4,
        caption=caption,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -567,8 +567,8 @@ map_value_cc1_notitle <-
         axis.ticks = element_blank()) +
   labs(title=subtitle_1,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limit = c(0, 25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limit = c(0, 20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -584,8 +584,8 @@ map_value_cc2_notitle <-
         axis.ticks = element_blank()) +
   labs(title=subtitle_2,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limit = c(0, 25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limit = c(0, 20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -602,8 +602,8 @@ map_value_who1_notitle <-
         axis.ticks = element_blank()) +
   labs(title=subtitle_3,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -620,14 +620,14 @@ map_value_who2_notitle <-
         axis.ticks = element_blank()) +
   labs(title=subtitle_4,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
 
 map_value_combined <- ggarrange(map_value_cc1_notitle, map_value_cc2_notitle, map_value_who1_notitle, map_value_who2_notitle,
-                        ncol = 1, nrow = 4)
+                        ncol = 1, nrow = 4, common.legend = TRUE, legend = "bottom")
 
 
 ggsave(filename = "fig9.png", plot = last_plot(), 
@@ -780,7 +780,7 @@ map_dalys_percent_who_region <-
        fill="Percent") +
   scale_fill_distiller(palette = "YlGn",
                        direction = 1,
-                       limits = c(0,25),
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -808,8 +808,8 @@ map_value_cc1_who_region <-
        subtitle=subtitle_1,
        caption=caption,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limit = c(0, 25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limit = c(0, 20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -837,8 +837,8 @@ map_value_cc2_who_region <-
        subtitle=subtitle_2,
        caption=caption,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limit = c(0, 25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limit = c(0, 20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -865,8 +865,8 @@ map_value_who1_who_region <-
        subtitle=subtitle_3,
        caption=caption,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -893,8 +893,8 @@ map_value_who2_who_region <-
        subtitle=subtitle_4,
        caption=caption,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 ggsave(filename = "fig8_who_region.png", plot = last_plot(), 
@@ -919,8 +919,8 @@ map_value_cc1_notitle_who_region <-
         axis.ticks = element_blank()) +
   labs(title=subtitle_1,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limit = c(0, 25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limit = c(0, 20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -941,8 +941,8 @@ map_value_cc2_notitle_who_region <-
   labs(title=subtitle_2,
        
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limit = c(0, 25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limit = c(0, 20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -963,8 +963,8 @@ map_value_who1_notitle_who_region <-
   labs(title=subtitle_3,
        
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -983,14 +983,14 @@ map_value_who2_notitle_who_region <-
         axis.ticks = element_blank()) +
   labs(title=subtitle_4,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
 
 map_value_combined <- ggarrange(map_value_cc1_notitle_who_region, map_value_cc2_notitle_who_region, map_value_who1_notitle_who_region, map_value_who2_notitle_who_region,
-                                ncol = 1, nrow = 4)
+                                ncol = 1, nrow = 4, common.legend = TRUE, legend = "bottom")
 
 
 ggsave(filename = "fig9_who_region.png", plot = last_plot(), 
@@ -1137,7 +1137,7 @@ map_dalys_percent_ihme_region <-
        fill="Percent") +
   scale_fill_distiller(palette = "YlGn",
                        direction = 1,
-                       limits = c(0,25),
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -1165,8 +1165,8 @@ map_value_cc1_ihme_region <-
        subtitle=subtitle_1,
        caption=caption,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limit = c(0, 25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limit = c(0, 20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -1194,8 +1194,8 @@ map_value_cc2_ihme_region <-
        subtitle=subtitle_2,
        caption=caption,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limit = c(0, 25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limit = c(0, 20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -1222,8 +1222,8 @@ map_value_who1_ihme_region <-
        subtitle=subtitle_3,
        caption=caption,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -1250,8 +1250,8 @@ map_value_who2_ihme_region <-
        subtitle=subtitle_4,
        caption=caption,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -1277,8 +1277,8 @@ map_value_cc1_notitle_ihme_region <-
         axis.ticks = element_blank()) +
   labs(title=subtitle_1,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limit = c(0, 25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limit = c(0, 20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -1299,8 +1299,8 @@ map_value_cc2_notitle_ihme_region <-
   labs(title=subtitle_2,
 
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limit = c(0, 25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limit = c(0, 20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -1321,8 +1321,8 @@ map_value_who1_notitle_ihme_region <-
   labs(title=subtitle_3,
        
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
@@ -1341,14 +1341,14 @@ map_value_who2_notitle_ihme_region <-
         axis.ticks = element_blank()) +
   labs(title=subtitle_4,
        fill="% of GDP") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0,25),
+  scale_fill_distiller(palette = "Reds", direction = 1,
+                       limits = c(0,20),
                        oob = squish) +
   facet_grid(~estimate)
 
 
 map_value_combined <- ggarrange(map_value_cc1_notitle_ihme_region, map_value_cc2_notitle_ihme_region, map_value_who1_notitle_ihme_region, map_value_who2_notitle_ihme_region,
-                                ncol = 1, nrow = 4)
+                                ncol = 1, nrow = 4, common.legend = TRUE, legend = "bottom")
 
 
 ggsave(filename = "fig9_ihme_region.png", plot = last_plot(), 
@@ -1636,7 +1636,7 @@ chart_3_cc1_notitle_ihme_region <-
         axis.title = element_blank(), 
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank()) +
-  geom_text(aes(label=round(region_cost_cc1/region_gdp*100,1)), vjust=1.6, color="black", size=2) + 
+  geom_text(aes(label=round(region_cost_cc1/region_gdp*100,1)), vjust=1.6, color="black", size=2.5) + 
   coord_cartesian(ylim = c(0, 25)) + 
   scale_fill_manual(name = "Region", values = ihme_pal)
 
@@ -1657,7 +1657,7 @@ chart_3_cc2_notitle_ihme_region <-
         axis.title = element_blank(), 
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank()) +
-  geom_text(aes(label=round(region_cost_cc2/region_gdp*100,1)), vjust=1.6, color="black", size=2) + 
+  geom_text(aes(label=round(region_cost_cc2/region_gdp*100,1)), vjust=1.6, color="black", size=2.5) +
   coord_cartesian(ylim = c(0, 25)) + 
   scale_fill_manual(name = "Region", values = ihme_pal)
 
@@ -1680,7 +1680,7 @@ chart_3_who1_notitle_ihme_region <-
         axis.title = element_blank(), 
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank()) +
-  geom_text(aes(label=round(region_cost_who1/region_gdp*100,1)), vjust=1.6, color="black", size=2) + 
+  geom_text(aes(label=round(region_cost_who1/region_gdp*100,1)), vjust=1.6, color="black", size=2.5) +
   coord_cartesian(ylim = c(0, 25)) + 
   scale_fill_manual(name = "Region", values = ihme_pal)
 
@@ -1701,7 +1701,7 @@ chart_3_who2_notitle_ihme_region <-
         axis.title = element_blank(), 
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank()) +
-  geom_text(aes(label=round(region_cost_who2/region_gdp*100,1)), vjust=1.6, color="black", size=2) + 
+  geom_text(aes(label=round(region_cost_who2/region_gdp*100,1)), vjust=1.6, color="black", size=2.5) +
   coord_cartesian(ylim = c(0, 25)) + 
   scale_fill_manual(name = "Region", values = ihme_pal)
 
@@ -1709,17 +1709,27 @@ chart_3_who2_notitle_ihme_region <-
 
 combo_chart_3_notitle_ihme_region <- ggarrange(chart_3_cc1_notitle_ihme_region,
                                 chart_3_cc2_notitle_ihme_region,
-                                chart_3_who1_notitle_ihme_region,
-                                chart_3_who2_notitle_ihme_region,
                                 common.legend = TRUE,
                                 legend = "bottom",
-                                ncol = 1, nrow = 4)
+                                ncol = 1, nrow = 2)
 
 
 ggsave(filename = "fig13_ihme_region.png", plot = last_plot(), 
        path = resultspath,
        width = 13,
-       height = 16)
+       height = 8)
+
+combo_chart_3_notitle_ihme_region_sa <- ggarrange(chart_3_who1_notitle_ihme_region,
+                                               chart_3_who2_notitle_ihme_region,
+                                               common.legend = TRUE,
+                                               legend = "bottom",
+                                               ncol = 1, nrow = 2)
+
+
+ggsave(filename = "fig13_ihme_region_sa.png", plot = last_plot(), 
+       path = resultspath,
+       width = 13,
+       height = 8)
 
 data_rev_ihme_inputs <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-inputs.csv"))
 data_rev_ihme_inputs <- data_rev_ihme_inputs %>% gather(inputs_mental:inputs_all,key = "input", value = "count")
@@ -1773,33 +1783,6 @@ combo_chart_4_gbdinputs_ihme_region <- ggarrange(chart_4_gbdinputs_ihme_region_s
         path = resultspath,
         width = 13,
         height = 8)
-############################################
-# TO DO
-
-# Check changes in rankings
-# Look up if there have been changes in disability weights
-# Critiques of disability weights 
-# Method 5: Bloom et al.
-# Method 6: Lancet 
-# Consider filtering out islands to reduce visual clutter
-# Figure out adjustment for scale to account for out of bounds in labeling
-# Proofread code
-# Clean up sensitivty analysis
-# Make Table 1 easier to replicate
-# Incorporate sensitivity analysis within this
-# Gather a few studies that focus on NCDs (cancers, CVD, etc.) and risk of death due to mental disorders
-# 
-
-# Old code for VSL US
-
-#vsl_2006 <- 7400000 # Source:https://www.epa.gov/sites/production/files/2017-08/documents/ee-0568-50.pdf
-#gdp_deflator_2019 <- 107.494 # Source: https://data.worldbank.org/indicator/NY.GDP.DEFL.ZS?locations=US
-#gdp_deflator_2006 <- 86.01
-#vsl_2019 <- vsl_2006 * gdp_deflator_2019 / gdp_deflator_2006
-#vsl <- vsl_2019
-#rm(vsl_2019, vsl_2006, gdp_deflator_2019, gdp_deflator_2006)
-#rm(list = ls())
-
 
 #################
 # Lower bounds
