@@ -1527,6 +1527,11 @@ ihme_positions <- c("East Asia", "Southeast Asia", "Oceania", "Central Asia", "E
                     "South Asia", "Southern Latin America", "Western Europe", "High-income North America",
                     "Australasia", "High-income Asia Pacific", "#NA")
 
+ihme_pal_new <- c("#002673", "#005CE6", "#73DFFF", "#E54800", "#E69800", "#FFD37F",
+              "#216F00", "#33A600", "#4CE600", "#A3FF73", "#4E4E4E", 
+              "#730000", "#FF0000", "#FF7F7F", "#FFBEBE", 
+              "#E6E600", "#73004C", "#A80084", "#C500FF", "#E600A9", "#FFBEE8", "#7F7F7F")
+
 ihme_pal <- c("#8C95F1", "#D7ECFC" , "#B6CDD4", "#EAA144", "#F3DA89", "#F9EFC2", "#B1F585", "#B6F2D5",
               "#E3FD8C", "#E2FDD7", "#99ACA4", "#9D5F56", "#E989A9", "#F5DBD8", "#F8EEEF",
               "#F4FF7C", "#C42AF1", "#E986F8", "#D7C2FC", "#DD9BE9", "#FAE5FE", "#7F7F7F")
