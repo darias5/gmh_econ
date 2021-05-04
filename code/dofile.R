@@ -2,7 +2,7 @@
 #
 # ESTIMATING THE GLOBAL ECONOMIC BURDEN OF MENTAL ILLNESS 
 # Daniel Arias, PhD Student, Population Health Sciences
-# April 27, 2020
+# May 4, 2021
 #
 ##################################################################
 
@@ -1689,6 +1689,7 @@ chart_3_who1_notitle_ihme_region <-
   coord_cartesian(ylim = c(0, 25)) + 
   scale_fill_manual(name = "Region", values = ihme_pal)
 
+
 chart_3_who2_notitle_ihme_region <- 
   
   data_rev_ihme_region_1 %>% 
@@ -1788,6 +1789,32 @@ combo_chart_4_gbdinputs_ihme_region <- ggarrange(chart_4_gbdinputs_ihme_region_s
         path = resultspath,
         width = 13,
         height = 8)
+ 
+ 
+ 
+ data_rev_ihme_region_1 %>% 
+   filter(measure_id== "2") %>% 
+   filter(!is.na(ihme_region)) %>%
+   mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
+   ggplot(aes(x = ihme_region, fill=ihme_region, y=region_cost_who1/region_gdp*100)) +
+   geom_bar(stat="identity")+
+   labs(title="Value per DALY: GDP/capita",
+        x = "",
+        y = "Percent of GDP") +
+   facet_grid(~estimate) + 
+   theme(panel.grid.major.y =  element_blank(), 
+         panel.background = element_blank(),
+         axis.title = element_blank(), 
+         axis.text.x = element_blank(),
+         axis.ticks.x = element_blank()) +
+   geom_text(aes(label=round(region_cost_who1/region_gdp*100,1)), vjust=1.6, color="black", size=2.5) +
+   scale_fill_manual(name = "Region", values = ihme_pal)
+ 
+ ggsave(filename = "fig13_ihme_region_GDPcap.png", plot = last_plot(), 
+        path = resultspath,
+        width = 13,
+        height = 8)
+ 
 
 #################
 # Lower bounds
