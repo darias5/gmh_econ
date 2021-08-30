@@ -967,24 +967,7 @@ write.csv(table2_t, file = "results/table2.csv")
 rm(table2, table2_t)
 
 
-
-
-
-
-
-
-
-
-## To do
-# Run SA
-# Drop datasources and references to names (first line, directories)
-
-
 ########### Sensitivity Analysis ######################
-
-
-
-
 
 set.seed(82420212)
 prev.sample <- rnorm(n = 1000, mean = .1304, sd = ((.1402 - .1212) / 3.92))
@@ -1016,7 +999,6 @@ psa_data %>% ggplot(aes(x = rr.sample, y = deaths_mh/1000000, alpha = prev.sampl
   theme_pubr()
 
 
-
 set.seed(82420212)
 prev.sample <- runif(n = 1000, min = 0.01, max = 0.2)
 a <- c(.5, 1, 1.5, 2, 2.5, 3)
@@ -1038,34 +1020,9 @@ psa_data %>% ggplot(aes(x = prev.sample*100, y = deaths_mh/1000000, color = name
   theme_pubr() +
   facet_wrap(~rr.sample)
 
-
-set.seed(82420212)
-prev.sample <- rnorm(n = 1000, mean = .1304, sd = ((.1402 - .1212) / 3.92))
-a <- c(.5, 1, 1.5, 2, 2.5, 3)
-rr.sample <- runif(n = 1000, min = 2.2-.5, max = 2.7)
-deaths.sample <- rnorm (n = 1000,  mean = 56526959.51, sd = ((59205883 - 53742682.45) / 3.92))
-psa_data <- cbind.data.frame(rr.sample, prev.sample, deaths.sample)
-psa_data$Cases <- ((psa_data$prev.sample  * ((psa_data$rr.sample - 1)))) /  ((psa_data$rr.sample))
-psa_data$TotalPop <- ((psa_data$prev.sample  * ((psa_data$rr.sample - 1)))) /  (((psa_data$prev.sample  * ((psa_data$rr.sample - 1))))+1)
-
-psa_data <- psa_data %>% pivot_longer(cols = c(TotalPop, Cases), values_to = "paf")
-psa_data$deaths_mh <- psa_data$deaths.sample * psa_data$paf
-
-psa_data %>% ggplot(aes(x = rr.sample, y = deaths_mh/1000000)) +
-  geom_rect(aes(xmin=2.12, xmax=2.33, ymin = -Inf, ymax= Inf), fill = "grey90") +
-  geom_point(aes(alpha = prev.sample, color = name)) + 
-  geom_vline(xintercept = 2.22) +
-  labs(alpha = "Prevalence of mental disorders, %",  
-       y = "Global # of deaths attributable to mental disorders, millions",
-       color = "Prevalence of risk factor w.r.t",
-       x = "Relative risk",
-       caption = "Cases: p(RR -1)/ RR. TotalPop: [p(RR - 1)] / [(p(RR -1) + 1]. Vertical line = pooled RR from Walker et. al (2.2), grey shaded region represents 95% CI.")+ 
-  lims(y = c(0,max(psa_data$deaths_mh/1000000)))
-
-
 ### Walker et al sensitivity analysis
 set.seed(82420212)
-prev.sample <- rnorm(n = 1000, mean = .261, sd = .01)
+prev.sample <- rnorm(n = 1000, mean = .261, sd = .05)
 rr.sample <- runif(n = 1000, min = 2.22-.5, max = 2.72)
 deaths.sample <- rnorm (n = 1000,  mean = 56526959.51, sd = ((59205883 - 53742682.45) / 3.92))
 psa_data <- cbind.data.frame(rr.sample, prev.sample, deaths.sample)
