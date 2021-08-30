@@ -2,18 +2,13 @@
 #
 # ESTIMATING THE GLOBAL ECONOMIC BURDEN OF MENTAL ILLNESS 
 # Daniel Arias, PhD Student, Population Health Sciences
-# May 4, 2021
+# August 29, 2021
 #
 ##################################################################
 
 ######################
 ##   HOUSEKEEPING   ##
 ######################
-
-# setting directories - change to your local directory
-path <- "~/3. PhD/WQE/WQE II/gmh_econ"
-datapath <- paste(path,'data', sep = "/")
-resultspath <- paste(path,'results', sep = "/")
 
 # Loading libraries
 library(readxl)
@@ -31,51 +26,59 @@ library(ggpubr)
 library(rnaturalearth)
 library(rnaturalearthdata)
 
+# Setting directories - change these to your local directory
+path <- "~/3. PhD/WQE/WQE II/gmh_econ"
+datapath <- paste(path,'data', sep = "/")
+resultspath <- paste(path,'results', sep = "/")
 
 ######################
 ##       DATA       ##
 ######################
 
-
 # Loading IHME Global Burden of Disease Data
-data <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-1.csv"))
+
+# The data are available for download at http://ghdx.healthdata.org/gbd-results-tool
+# Data should be downloaded for DALYs, YLLs, YLDs, deaths, and prevalence by cause and geographies
+# Save the file as IHME-GBD_2019_DATA-2019.csv
+# If prevalence data are saved separately, save it as IHME-GBD_2019_DATA-2019-prev.csv
+
+data <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019.csv"))
 
 # Adding alpha-3 codes from ISO 3166-1 (i.e., World Bank Codes)
 ihme_crosswalk <- read_excel(path = file.path(datapath, "ihme_crosswalk.xlsx")) %>% 
   select(-c("location_name"))
-
 data <- left_join(data, ihme_crosswalk, by = "location_id")
-
-# clean up
-rm(ihme_crosswalk) 
 
 # Adding World Bank income classifications
 income_level <- read_excel(path = file.path(datapath, "OGHIST.xls"), sheet = 2) %>% 
   select(-(c(2:34))) %>% 
   rename("income_level" = "2019")
-
 data <- left_join(data, income_level, by = "iso_code")
-
-# clean up
-rm(income_level) 
 
 # Adding population (backed out using IHME rate data for consistency)
 data <- data %>% unique() %>% gather("numeric_name", "est", "val":"lower") 
 data_number <- data %>% filter(metric_id == 1) %>% rename("number" = "est")
-data_rate <- data %>% filter(metric_id == 3) 
-data_rate <- data %>% select("measure_id","location_id", "sex_id", "age_id", "cause_id", "year", "numeric_name", "est") %>% rename("rate" = "est")
-data <- left_join(data_number, data_rate, by = c("measure_id","location_id", "sex_id", "age_id", "cause_id", "year", "numeric_name"))
-rm(data_number, data_rate)
+data_rate <- data %>% filter(metric_id == 3) %>% select("measure_id","location_id", "sex_id", "age_id", "cause_id", "year", "numeric_name", "est") %>% rename("rate" = "est")
+data <- left_join(data_number, data_rate, by = c("measure_id","location_id", "sex_id", "age_id", "cause_id", "year", "numeric_name")) %>% 
+  select(!c("metric_id", "metric_name")) %>%
+  unique()
+data$population_100k <- data$number/data$rate
+data$population <- data$population_100k  * 100000
 
-data <- data %>% unique() %>% filter(numeric_name == "val") %>% spread(numeric_name, number)
-data$population <- data$val/data$rate
-data <- data %>% filter(population != 1) %>% unique()
+# Removing unused columns
+data <- data %>% select(!c("rate"))  %>% 
+  select(!c("sex_id", "sex_name", "age_id", "age_name", "year")) %>%
+  filter(measure_id != 5)
 
-############################
-## vIGO ET AL REPLICATION ##
-############################
+# Clean up
+rm(ihme_crosswalk, income_level, data_number, data_rate)
 
-# VIGO METHOD: ALLOCATION OF THE FOLLOWING TO MENTAL HEALTH 
+
+#######################################################
+##  ORIGINAL AND 2016 REALLOCATION APPROACH  ##
+##################################################
+
+# VIGO EL AL. 2016 WEIGHTS: ALLOCATION OF THE FOLLOWING TO MENTAL HEALTH 
 # (PERCENTS DENOTE AMOUNT REALLOCATED TO MENTAL HEALTH)
 
 # Dementia - 100%
@@ -83,13 +86,13 @@ data <- data %>% filter(population != 1) %>% unique()
 # Migraine - 100%
 # Tension-type headache - 100%
 # Self-harm - 100%
-# Chronic pain syndrom currently attributed to musculoskeletal disorders - 33%
+# Chronic pain syndrome currently attributed to musculoskeletal disorders - 33%
 
-############################
 
-# Relevant IHME cause IDs
+# Naming relevant IHME cause IDs
 mental_disorder_cause_id <- 558
-dementia_cause_id <- c(543, 544)
+dementia_cause_id1 <- 543
+dementia_cause_id2 <- 544
 epilepsy_cause_id <- 545
 migraine_cause_id <- 547
 tension_type_headache_cause_id <- 548
@@ -97,176 +100,217 @@ self_harm <- 718
 musculoskeletal_cause_id <- 626
 all_cause_id <- 294
 
-# Causes to fully include under mental disorders
-revision_full <- c(mental_disorder_cause_id,
-                   dementia_cause_id,
-                   epilepsy_cause_id,
-                   migraine_cause_id,
-                   tension_type_headache_cause_id,
-                   self_harm)
 
-# Causes to include under mental disorders, 1/3rd
-revision_third <- musculoskeletal_cause_id
+# Original allocation
 
-# Relevant causes to retain
-inclusion <- c(mental_disorder_cause_id,
-               dementia_cause_id,
-               epilepsy_cause_id,
-               migraine_cause_id,
-               tension_type_headache_cause_id,
-               self_harm,
-               musculoskeletal_cause_id,
-               all_cause_id)
+# Cause ID 558 reflects the GBD 2019 mental disorder allocation
+# These lines of code retain this allocation and save it under "original value"
+cause_id <- c(mental_disorder_cause_id)
+original_weights <- c(1)
+original_weights_df <- data.frame(cause_id, original_weights)
+data_rev <- left_join(data, original_weights_df, by = c("cause_id"))
+data_rev$original_weights[is.na(data_rev$original_weights)] <- 0
+data_rev$original_value <- data_rev$number * data_rev$original_weights  
 
-data_vigo <- data %>% filter(cause_id %in% inclusion)
+# 2016 reallocation
 
-# Applying Vigo et al. re-allocations
+cause_id <- c(mental_disorder_cause_id,
+              dementia_cause_id1,
+              dementia_cause_id2,
+              epilepsy_cause_id,
+              migraine_cause_id,
+              tension_type_headache_cause_id,
+              self_harm,
+              musculoskeletal_cause_id,
+              mental_disorder_cause_id,
+              dementia_cause_id1,
+              dementia_cause_id2,
+              epilepsy_cause_id,
+              migraine_cause_id,
+              tension_type_headache_cause_id,
+              self_harm,
+              musculoskeletal_cause_id,
+              mental_disorder_cause_id,
+              dementia_cause_id1,
+              dementia_cause_id2,
+              epilepsy_cause_id,
+              migraine_cause_id,
+              tension_type_headache_cause_id,
+              self_harm,
+              musculoskeletal_cause_id)
 
-data_vigo$mh_gbd <- ifelse(data_vigo$cause_id == mental_disorder_cause_id, 1, 0)  # Fully retain existing mental disorders
-data_vigo$mh_vigo <- ifelse(data_vigo$cause_id %in% revision_full, 1, 0)          # Allocate 100% of these conditions
-data_vigo$mh_vigo[data_vigo$cause_id %in% revision_third] <- 1/3                  # Allocate 33% of these conditions
-data_vigo$all <- ifelse(data_vigo$cause_id == all_cause_id, 1, 0)                 # Binary in case of all_cause 
-data_vigo$value <- data_vigo$val * data_vigo$mh_gbd                               # Retain original IHME values
-data_vigo$value_rev <- data_vigo$val * data_vigo$mh_vigo                          # Apply allocation percents against original IHME values
+numeric_name <- c("val", "val", "val", "val", "val", "val", "val", "val",
+                  "lower","lower","lower","lower","lower","lower","lower","lower",
+                  "upper","upper","upper","upper","upper","upper","upper","upper")
 
-# Combine original and re-allocated values by location, measure, sex (both), age (all), and metric (number)
-data_vigo <- data_vigo %>% 
-  group_by(location_id, measure_id, sex_id, age_id, metric_id) %>% 
-  mutate(mh_value_agg_rev = sum(value_rev), mh_value_agg = sum(value))
+rev_2016_weights <- c(1,
+                      1,
+                      1,
+                      1,
+                      1,
+                      1,
+                      1,
+                      1/3, # Vigo et. al allocates 1/3rd of musculoskeletal burden to mental disorders
+                      
+                      1,
+                      1,
+                      1,
+                      1,
+                      1,
+                      1,
+                      1,
+                      0, # Allocating none of musculoskeletal 
+                      
+                      1,
+                      1,
+                      1,
+                      1,
+                      1,
+                      1,
+                      1,
+                      2/3) # Allocating 2/3rds of musculoskeletal 
 
-# Clean up
-rm(all_cause_id, dementia_cause_id, epilepsy_cause_id, mental_disorder_cause_id, migraine_cause_id, musculoskeletal_cause_id, 
-   revision_full, revision_third, self_harm, tension_type_headache_cause_id)
 
-# Pull out global data to aid in calculations 
-data_vigo_global <- data_vigo %>% filter(location_id == 1) %>% filter(population != 1) %>% filter(metric_id == 1) %>% filter(cause_id == 294) %>% unique()
+rev_2016_weights_df <- data.frame(cause_id,numeric_name, rev_2016_weights)
+data_rev <- left_join(data_rev, rev_2016_weights_df, by = c("cause_id", "numeric_name"))
 
-global_2019_dalys <- data_vigo_global$val[data_vigo_global$measure_id == 2]
-global_2019_ylds <- data_vigo_global$val[data_vigo_global$measure_id == 3]
+rm(cause_id, numeric_name, rev_2016_weights)
+data_rev$rev_2016_weights[is.na(data_rev$rev_2016_weights)] <- 0
+data_rev$rev_2016_value <- data_rev$number * data_rev$rev_2016_weights  
 
-global_2019_dalys_mh_orig <- data_vigo_global$mh_value_agg[data_vigo_global$measure_id == 2]
-global_2019_ylds_mh_orig <- data_vigo_global$mh_value_agg[data_vigo_global$measure_id == 3]
-
-# Testing: all.equal tests should yield roughly equivalent results
-# Source: http://ghdx.healthdata_vigo.org/gbd-results-tool
-# This confirms that the sums of original IHME DALYS and YLDS were correctly replicated
-
-all.equal(125311322, global_2019_dalys_mh_orig)
-all.equal(125293960, global_2019_ylds_mh_orig)
-all.equal(0.0455 , global_2019_dalys_mh_orig/global_2019_dalys)
-all.equal(0.1494 , global_2019_ylds_mh_orig/global_2019_ylds)
-
-# Subset of data
-data_rev <- data_vigo %>%
-  filter(cause_id == "294") %>% #Filters to all causes; data_gh$val == total burden by location id
-  filter(metric_id == "1") %>%  #Filters to numeric metric
-  rename("Revised - Vigo et al. method" = mh_value_agg_rev, "Original" = mh_value_agg, "measure_total" = val) %>%
-  filter(measure_id %in% 1:4) %>% #Retains only deaths, DALYS, YLDs, and YLLs
-  ungroup %>%
-  select(c(1:4, 13:15, 17:18,24:25))
 
 ############################
-##  WALKER ET AL METHOD  ##
+##  COMPOSITE APPROACH  ##
 ############################
 
-
-# Loading IHME Global Burden of Disease Data
-data_prev <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-prev.csv"))
-
-# source: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4461039/
 # Due to the distributive property of the Population Attributable Fraction, a category-specific attribution fraction is estimated
 # using the formula from Rockhill et al, 1998:https://pubmed.ncbi.nlm.nih.gov/9584027/  
 
-# Relevant IHME cause IDs
-mental_disorder_cause_id <- 558
-schizophrenia_cause_id <- 559
-depressive_cause_id <- 567
-bipolar_cause_id <- 570
-anxiety_cause_id <- 571 
+natural_cause_id <- 409 #NCDs
+unnatural_cause_id <- 687 # Injuries
 
-# Relative risks from Walker et al.
-relative_risk <- data.frame(
-  c(mental_disorder_cause_id,
-    schizophrenia_cause_id,
-    depressive_cause_id,
-    bipolar_cause_id,
-    anxiety_cause_id),
-  c(2.22,
-    2.54,
-    1.71,
-    2,
-    1.43))
-colnames(relative_risk) <- c("cause_id", "rel_risk")
 
-# Matching relative risks to IHME cause IDs
-data_prev <- inner_join(data_prev, relative_risk, by = "cause_id")
+cause_id <- c(natural_cause_id,
+              unnatural_cause_id,
+              natural_cause_id,
+              unnatural_cause_id,
+              natural_cause_id,
+              unnatural_cause_id)
 
-# Calculating PAR using formula from Walker et al.
-data_prev$par <-     data_prev$val  * ((data_prev$rel_risk - 1) /    data_prev$rel_risk)
 
-# Filtering for mental disorders combined, only
-data_prev_allmentaldisorders <- data_prev %>% filter(cause_id == mental_disorder_cause_id) %>% select(c(location_id,par))
+numeric_name <- c("val", "val", 
+                  "lower","lower",
+                  "upper","upper")
 
-# Joining PAR for mental disorders to dataframe
-data_rev <- full_join(data_rev, data_prev_allmentaldisorders, by = "location_id")
+relative_risk <- c(1.8,
+                   7.22,
+                   1.71,
+                   6.43,
+                   1.88,
+                   8.12)
 
-# Using PAR to calculate attributable burden due to mental disorders
-data_rev$"Revised - Walker et al. method" = data_rev$par * data_rev$measure_total
+relative_risk_df <- data.frame(cause_id,numeric_name, relative_risk)
 
-# Clean up, re-ordering, and renaming columns
-rm(relative_risk, data_prev_allmentaldisorders)
-data_rev <- data_rev %>% relocate(par, .after = population)
-data_rev <- data_rev %>% rename("Original GBD method" = Original)
+data_rev <- left_join(data_rev, relative_risk_df, by = c("cause_id", "numeric_name"))
+
+data_prev <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-prev.csv"))
+data_prev <- data_prev %>%
+  gather("numeric_name", "prevalence", "val":"lower")  %>% 
+  select(!c("sex_id", "sex_name", "age_id", "age_name", "year")) %>% filter(cause_id == mental_disorder_cause_id) %>% select("location_id", "numeric_name", "prevalence")
+data_rev  <- left_join(data_rev, data_prev, by = c("location_id", "numeric_name"))
+
+# Two approaches to calculating the PAF are presented here. Later, only one will be retained for the creation of graphs, tables, and charts.
+# In Walker et al., the PAF formula numbered as formula 4 in Rockhill et al. is used, in which prevalence is meant to be the
+# prevalence of mental disorders among cases (i.e., the deceased). The conventional formula, formula 2, takes prevalence as 
+# the prevalence of mental disorders in the general population, but is not internally valid in cases of confounding.
+
+data_rev$paf2 <-     (data_rev$prevalence  * ((data_rev$relative_risk - 1))) /   ((data_rev$prevalence  * ((data_rev$relative_risk - 1))+1))
+data_rev$paf4 <-     data_rev$prevalence  * ((data_rev$relative_risk - 1) /    data_rev$relative_risk)
+
+data_rev <- data_rev%>% gather("paf_formula", "paf", "paf2":"paf4") 
+data_rev$paf[is.na(data_rev$paf)] <- 0
+data_rev$rev_2015_value <- data_rev$number * data_rev$paf
+
+# Combine original and re-allocated values by location, measure, PAF formula used, and numeric value (point estimate, and upper or lower bounds)
+data_rev <- data_rev %>% 
+  group_by(location_id, measure_id, numeric_name, paf_formula) %>% 
+  mutate(rev_2016_value_agg = sum(rev_2016_value),  rev_2015_value_agg = sum(rev_2015_value),original_value_agg = sum(original_value)) %>%
+  rename("measure_total" = number) %>%
+  ungroup %>%
+  filter(cause_id == "294") %>% select(!c("original_weights":"relative_risk", "paf":"rev_2015_value"))
+
+# Clean up
+rm(data_prev, relative_risk_df, original_weights_df, rev_2016_weights_df)
+
 
 ############################
 ##  COMPOSITE METHOD  ##
 ############################
 
 # This method pulls YLLs from Walker et al. and YLDs from Vigo et al. together to re-estimate 
-# DALYs attributable to mental disorders. This captures attributable mortality from mental disorders
-# (not captured by Vigo et al.) without double counting DALYs due to suicide.
+# DALYs attributable to mental disorders. 
 
 # Draw in YLDs from Vigo et al.
-data_rev$composite_ylds <-ifelse(data_rev$measure_id == 3, data_rev$"Revised - Vigo et al. method", 0)
+data_rev$composite_ylds <-ifelse(data_rev$measure_id == 3, data_rev$rev_2016_value_agg, 0)
 
 # Draw in YLLs from Walker et al.
-data_rev$composite_ylls <-ifelse(data_rev$measure_id == 4, data_rev$"Revised - Walker et al. method", 0)
+data_rev$composite_ylls <-ifelse(data_rev$measure_id == 4, data_rev$rev_2015_value_agg, 0)
 
 # Combine to calculate DALYs
-data_rev_composite <- data_rev %>% select(location_id, measure_id, composite_ylds, composite_ylls) %>%
-  group_by(location_id) %>%
+data_rev_composite <- data_rev %>% select(location_id, numeric_name, paf_formula, measure_id, composite_ylds, composite_ylls) %>%
+  group_by(location_id, numeric_name, paf_formula) %>%
   mutate(composite_dalys = sum(composite_ylds, composite_ylls))
-
-data_rev_composite <- data_rev_composite %>% filter(measure_id == 2) %>% ungroup() %>% unique() %>% select(c(1,5))
-data_rev <- inner_join(data_rev, data_rev_composite, by = "location_id")
+data_rev_composite <- data_rev_composite %>% filter(measure_id == 2) %>% ungroup() %>% unique() %>% select("location_id", "numeric_name", "paf_formula", "composite_dalys") 
+data_rev <- left_join(data_rev, data_rev_composite, by = c("location_id", "numeric_name", "paf_formula"))
 data_rev$composite_dalys[data_rev$measure_id != 2] <- 0
 data_rev$composite_ylds[data_rev$measure_id != 3] <- 0
 data_rev$composite_ylls[data_rev$measure_id != 4] <- 0
 
 # Draw in deaths from Walker et al.
-data_rev$composite_deaths <-ifelse(data_rev$measure_id == 1, data_rev$"Revised - Walker et al. method", 0)
+data_rev$composite_deaths <-ifelse(data_rev$measure_id == 1, data_rev$rev_2015_value_agg, 0)
 data_rev$composite_deaths[data_rev$measure_id != 1] <- 0
 
 
 # Combined columns, clean up, re-organizing, tidying, and labeling
 data_rev$composite <- data_rev$composite_ylds + data_rev$composite_ylls + data_rev$composite_dalys + data_rev$composite_deaths
-data_rev <- data_rev %>% select(!c(14:17))
-data_rev <- data_rev %>% rename("Revised - Composite method" = composite)
-data_rev <- data_rev %>% relocate(12, .after = par)
+data_rev <- data_rev %>% select(!c("composite_ylds":"composite_deaths")) %>%  relocate(original_value_agg, .after = paf_formula) %>%
+  relocate(numeric_name, .after = prevalence) %>%  
+  rename("Revised - Composite method" = composite,
+         "Revised - PAF method" = rev_2015_value_agg,
+         "Revised - 2016 reallocation method" = rev_2016_value_agg,
+         "GBD 2019" = original_value_agg)
+
 data_rev$cause_name <- "Mental disorders"
-data_rev <- data_rev %>% gather("estimate", "number", 11:14)
-rm(data_vigo, data_vigo_global, anxiety_cause_id, bipolar_cause_id, depressive_cause_id, inclusion, mental_disorder_cause_id, schizophrenia_cause_id, data_rev_composite)
+data_rev <- data_rev %>% gather("estimate", "number", "GBD 2019":"Revised - Composite method")
+
+# Clean up
+rm(data_rev_composite,
+   natural_cause_id,
+   unnatural_cause_id,
+   mental_disorder_cause_id,
+   dementia_cause_id1,
+   dementia_cause_id2,
+   epilepsy_cause_id,
+   migraine_cause_id,
+   tension_type_headache_cause_id,
+   self_harm,
+   musculoskeletal_cause_id,
+   all_cause_id,
+   cause_id,
+   numeric_name,
+   original_weights,
+   relative_risk)
+
 data_rev$estimate_id <- ifelse(data_rev$estimate == "Revised - Composite method", 4, 
-                               ifelse(data_rev$estimate == "Revised - Walker et al. method", 3,
-                                      ifelse(data_rev$estimate == "Revised - Vigo et al. method", 2, 1)))
+                               ifelse(data_rev$estimate == "Revised - PAF method", 3,
+                                      ifelse(data_rev$estimate == "Revised - 2016 reallocation method", 2, 1)))
 data_rev <- data_rev %>% relocate(estimate_id, .after = estimate)
 
-# Calculate rates and percents of burden
-data_rev$population_100k <- data_rev$population
-data_rev$population <- data_rev$population_100k  * 100000
+# Calculate rates and percent of burden
 data_rev <- data_rev %>% relocate (population_100k, .after = population)
 data_rev$rate_per_100k <- data_rev$number/data_rev$population_100k
 data_rev$percent <- data_rev$number/data_rev$measure_total*100
+
 
 ############################
 ##        COSTING         ##
@@ -305,1437 +349,472 @@ data_rev$cost_who1 <-ifelse(data_rev$measure_id == 2,
 # Method 4: WHO - GDP/capita * 3
 data_rev$cost_who2 <- data_rev$cost_who1 * 3
 
-# Pulling out global estimates
-data_global <- data_rev %>% filter(location_id == 1) %>% filter(measure_id == 2)
+##################################
+##         PAF FORMULA          ##
+##################################
 
-############################
-##         MAPS           ##
-############################
+# Select which of the PAF formulae to use for the remainder of the analysis
+
+data_rev <- data_rev %>% filter(paf_formula == "paf2") # Conventional formula
+# data_rev <- data_rev %>% filter(paf_formula == "paf4") # Case prevalence formula
+
+
+################################
+##         MAP PREP           ##
+################################
+
+data_rev_gbd <- data_rev %>% filter(estimate_id == 1) %>% select (c(measure_id, location_id, numeric_name, paf_formula, number:cost_who2)) %>%
+  rename(
+    "number_gbd" = "number",
+    "rate_per_100k_gbd" = "rate_per_100k",
+    "percent_gbd" = "percent",
+    "cost_cc1_gbd" = "cost_cc1",
+    "cost_cc2_gbd" = "cost_cc2",
+    "cost_who1_gbd" = "cost_who1",
+    "cost_who2_gbd" = "cost_who2"    )
+
+data_rev <- left_join(data_rev, data_rev_gbd, by = c("location_id", "measure_id", "numeric_name", "paf_formula"))
+
+data_rev <- data_rev %>% mutate(
+  number_diff = number - number_gbd,
+  rate_per_100k_diff = rate_per_100k - rate_per_100k_gbd,
+  percent_diff = percent - percent_gbd,
+  cost_cc1_diff = cost_cc1 - cost_cc1_gbd,
+  cost_cc2_diff = cost_cc2 - cost_cc2_gbd,
+  cost_who1_diff = cost_who1 - cost_who1_gbd,
+  cost_who2_diff = cost_who2 - cost_who2_gbd)
+
+# Import regional data
+region <- read_excel(path = file.path(datapath, "regions.xlsx"))
+
+# Merge
+region <- region %>% select (iso_code, who_region, ihme_region)
+data_rev <- full_join(data_rev, region, by = "iso_code")
+
+# WHO region map prep
+
+data_rev <- data_rev %>% group_by(estimate_id, measure_id, numeric_name, paf_formula, who_region) %>% 
+  mutate(who_region_pop100k = sum(population_100k),
+         who_region_number = sum(number),
+         who_region_measure_total = sum(measure_total),
+         who_region_gdp = sum(gdp, na.rm=TRUE))%>%
+  mutate(who_region_rate_per_100k = who_region_number/who_region_pop100k,
+         who_region_percent = who_region_number/who_region_measure_total*100,
+         who_region_population = who_region_pop100k * 100000) %>%
+  mutate(who_region_gdp_per_capita = who_region_gdp/who_region_population,
+         who_region_cost_cc1 = ifelse(measure_id == 2,
+                                      who_region_number * 1000, 0),
+         who_region_cost_cc2 = who_region_cost_cc1 * 5,
+         who_region_cost_who1 = ifelse(measure_id == 2,
+                                       who_region_number * who_region_gdp_per_capita, 0),
+         who_region_cost_who2 = who_region_cost_who1 * 3) %>%
+  ungroup()
+
+data_rev_gbd_who_region<- data_rev %>% filter(estimate_id == 1) %>% 
+  select (c(measure_id, location_id, numeric_name, paf_formula, who_region_number:who_region_cost_who2)) %>%
+  rename(
+    "who_region_number_gbd" = "who_region_number",
+    "who_region_rate_per_100k_gbd" = "who_region_rate_per_100k",
+    "who_region_percent_gbd" = "who_region_percent",
+    "who_region_cost_cc1_gbd" = "who_region_cost_cc1",
+    "who_region_cost_cc2_gbd" = "who_region_cost_cc2",
+    "who_region_cost_who1_gbd" = "who_region_cost_who1",
+    "who_region_cost_who2_gbd" = "who_region_cost_who2"
+  )  %>%
+  select(measure_id, location_id, numeric_name, paf_formula, who_region_number_gbd, who_region_rate_per_100k_gbd, who_region_percent_gbd,
+         who_region_cost_cc1_gbd, who_region_cost_cc2_gbd, who_region_cost_who1_gbd, who_region_cost_who2_gbd)
+
+data_rev <- left_join(data_rev, data_rev_gbd_who_region, by = c("location_id", "measure_id", "numeric_name", "paf_formula"))
+
+data_rev <- data_rev %>% mutate(
+  who_region_number_diff = who_region_number - who_region_number_gbd,
+  who_region_rate_per_100k_diff = who_region_rate_per_100k - who_region_rate_per_100k_gbd,
+  who_region_percent_diff = who_region_percent - who_region_percent_gbd,
+  who_region_cost_cc1_diff = who_region_cost_cc1 - who_region_cost_cc1_gbd,
+  who_region_cost_cc2_diff = who_region_cost_cc2 - who_region_cost_cc2_gbd,
+  who_region_cost_who1_diff = who_region_cost_who1 - who_region_cost_who1_gbd,
+  who_region_cost_who2_diff = who_region_cost_who2 - who_region_cost_who2_gbd
+)
+
+rm(data_rev_gbd_who_region)
+
+# IHME region  map prep
+
+data_rev <- data_rev %>% group_by(estimate_id, measure_id, numeric_name, paf_formula, ihme_region) %>% 
+  mutate(ihme_region_pop100k = sum(population_100k),
+         ihme_region_number = sum(number),
+         ihme_region_measure_total = sum(measure_total),
+         ihme_region_gdp = sum(gdp, na.rm=TRUE)
+  ) %>%
+  mutate(ihme_region_rate_per_100k = ihme_region_number/ihme_region_pop100k,
+         ihme_region_percent = ihme_region_number/ihme_region_measure_total*100,
+         ihme_region_population = ihme_region_pop100k * 100000) %>%
+  mutate(ihme_region_gdp_per_capita = ihme_region_gdp/ihme_region_population,
+         ihme_region_cost_cc1 = ifelse(measure_id == 2,
+                                       ihme_region_number * 1000, 0),
+         ihme_region_cost_cc2 = ihme_region_cost_cc1 * 5,
+         ihme_region_cost_who1 = ifelse(measure_id == 2,
+                                        ihme_region_number * ihme_region_gdp_per_capita, 0),
+         ihme_region_cost_who2 = ihme_region_cost_who1 * 3) %>%
+  ungroup()
+
+
+data_rev_gbd_ihme_region<- data_rev %>% filter(estimate_id == 1) %>% 
+  select (c(measure_id, location_id, numeric_name, paf_formula, ihme_region_number:ihme_region_cost_who2)) %>%
+  rename(
+    "ihme_region_number_gbd" = "ihme_region_number",
+    "ihme_region_rate_per_100k_gbd" = "ihme_region_rate_per_100k",
+    "ihme_region_percent_gbd" = "ihme_region_percent",
+    "ihme_region_cost_cc1_gbd" = "ihme_region_cost_cc1",
+    "ihme_region_cost_cc2_gbd" = "ihme_region_cost_cc2",
+    "ihme_region_cost_who1_gbd" = "ihme_region_cost_who1",
+    "ihme_region_cost_who2_gbd" = "ihme_region_cost_who2"
+  )  %>%
+  select(measure_id, location_id, numeric_name, paf_formula, ihme_region_number_gbd, ihme_region_rate_per_100k_gbd, ihme_region_percent_gbd,
+         ihme_region_cost_cc1_gbd, ihme_region_cost_cc2_gbd, ihme_region_cost_who1_gbd, ihme_region_cost_who2_gbd)
+
+data_rev <- left_join(data_rev, data_rev_gbd_ihme_region, by = c("location_id", "measure_id", "numeric_name", "paf_formula"))
+
+data_rev <- data_rev %>% mutate(
+  ihme_region_number_diff = ihme_region_number - ihme_region_number_gbd,
+  ihme_region_rate_per_100k_diff = ihme_region_rate_per_100k - ihme_region_rate_per_100k_gbd,
+  ihme_region_percent_diff = ihme_region_percent - ihme_region_percent_gbd,
+  ihme_region_cost_cc1_diff = ihme_region_cost_cc1 - ihme_region_cost_cc1_gbd,
+  ihme_region_cost_cc2_diff = ihme_region_cost_cc2 - ihme_region_cost_cc2_gbd,
+  ihme_region_cost_who1_diff = ihme_region_cost_who1 - ihme_region_cost_who1_gbd,
+  ihme_region_cost_who2_diff = ihme_region_cost_who2 - ihme_region_cost_who2_gbd
+)
+
+rm(data_rev_gbd_ihme_region)
 
 # Import map data
 world <- ne_countries(scale = "medium", returnclass = "sf")
 world$iso_code <- world$gu_a3
 world$iso_code[world$adm0_a3 == "SDS"] <- "SSD"
 
-
 # Merging map and dataframe
-data_rev_map <- full_join(world, data_rev, by = "iso_code")
+data_rev_map <- full_join(world, data_rev, by = "iso_code") %>% filter(numeric_name == "val")
 
 # Clean up
-rm(world)
+rm(world, data_rev_gbd)
 
 # Re-order estimates: original, Vigo, Walker, composite
 data_rev_map$estimate <- factor(data_rev_map$estimate,      # Reordering group factor levels
-                                levels = c("Original GBD method",
-                                           "Revised - Vigo et al. method",
-                                           "Revised - Walker et al. method",
+                                levels = c("GBD 2019",
+                                           "Revised - 2016 reallocation method",
+                                           "Revised - PAF method",
                                            "Revised - Composite method"))
 
-# Titles, subtitles, and captions
-
+# Standard subtitles, and captions
 subtitle_1 <- "Value per DALY: $1,000"
 subtitle_2 <- "Value per DALY: $5,000"
 subtitle_3 <- "Value per DALY: GDP/capita"
 subtitle_4 <- "Value per DALY: 3 X GDP/capita"
-caption <- "Source: Global Burden of Disease Study, Vigo et al. 2016"
-
-########################
-# Graphs
-
-
-map_deaths_per_cap <-
-  data_rev_map %>% 
-  filter(measure_id== "1") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = rate_per_100k), color = "black", size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Deaths due to mental disorders per 100,000",
-       subtitle="2019",
-       caption=caption,
-       fill="Deaths") +
-  scale_fill_distiller(palette = "RdYlBu",
-                       limits = c(0,100),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig1.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 4)
-
-# DALYS per capita
-
-map_dalys_per_cap <-
-  data_rev_map %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = rate_per_100k), color = "black", size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="DALYs due to mental disorders per 100,000",
-       subtitle="2019",
-       caption=caption,
-       fill="DALYs") +
-  scale_fill_distiller(palette = "RdYlBu",
-                       limits = c(0,6000),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig2.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 4)
-
-# Percent of deaths
-
-map_deaths_percent <-
-  data_rev_map %>% filter(measure_id== "1") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = percent), color = "black", size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Deaths due to mental disorders, % of deaths",
-       subtitle="2019",
-       caption=caption,
-       fill="Percent") +
-  scale_fill_distiller(palette = "YlGn",
-                       direction = 1,
-                       limits = c(0,15),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig3.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 4)
-
-# Percent of DALYs
-
-map_dalys_percent <-
-  data_rev_map %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = percent), color = "black", size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="DALYs due to mental disorders, % of DALYs",
-       subtitle="2019",
-       caption=caption,
-       fill="Percent") +
-  scale_fill_distiller(palette = "YlGn",
-                       direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig4.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 4)
-
-# Value (CC1), % of GDP
-
-map_value_cc1 <- 
-  data_rev_map %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = cost_cc1/gdp*100), color = "black", size = 0.01) +
-    theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle=subtitle_1,
-       caption=caption,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limit = c(0, 20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig5.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 3)
-
-# Value (CC2), % of GDP
-
-map_value_cc2 <- 
-  data_rev_map %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = cost_cc2/gdp*100), color = "black", size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle=subtitle_2,
-       caption=caption,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limit = c(0, 20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig6.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 3)
-
-# Value (WHO1), % of GDP
-
-map_value_who1 <- 
-  data_rev_map %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = cost_who1/gdp*100), color = "black", size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle=subtitle_3,
-       caption=caption,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig7.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 3)
-
-# Value (WHO2), % of GDP
-
-map_value_who2 <- 
-  data_rev_map %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = cost_who2/gdp*100), color = "black", size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle=subtitle_4,
-       caption=caption,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig8.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 3)
-
-# Combined value maps
-
-
-map_value_cc1_notitle <- 
-  data_rev_map %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = cost_cc1/gdp*100), color = "black", size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title=subtitle_1,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limit = c(0, 20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-map_value_cc2_notitle <- 
-  data_rev_map %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = cost_cc2/gdp*100), color = "black", size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title=subtitle_2,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limit = c(0, 20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-
-map_value_who1_notitle <- 
-  data_rev_map %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = cost_who1/gdp*100), color = "black", size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title=subtitle_3,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-
-map_value_who2_notitle <- 
-  data_rev_map %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = cost_who2/gdp*100), color = "black", size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title=subtitle_4,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-
-map_value_combined <- ggarrange(map_value_cc1_notitle, map_value_cc2_notitle, map_value_who1_notitle, map_value_who2_notitle,
-                        ncol = 1, nrow = 4, common.legend = TRUE, legend = "bottom")
-
-
-ggsave(filename = "fig9.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 8)
-
-
-
-### Region maps
-
-# Load in region data
-region <- read_excel(path = file.path(datapath, "regions.xlsx"))
-
-# Merge
-region <- region %>% select (iso_code, who_region, ihme_region)
-
-data_rev_map_region <- full_join(data_rev_map, region, by = "iso_code")
-
-# WHO regions
-
-data_rev_who_region <- data_rev_map_region %>% group_by(estimate, measure_id, who_region) %>% 
-  mutate(region_pop100k = sum(population_100k),
-         region_number = sum(number),
-         region_measure_total = sum(measure_total),
-         region_gdp = sum(gdp, na.rm=TRUE)
-  ) %>%
-  mutate(region_percent = region_number/region_measure_total*100,
-         region_population = region_pop100k * 100000)
-
-data_rev_who_region$region_gdp_per_capita <- data_rev_who_region$region_gdp/data_rev_who_region$region_population
-
-data_rev_who_region$region_cost_cc1 <- ifelse(data_rev_who_region$measure_id == 2,
-                                              data_rev_who_region$region_number * 1000, 0)
-
-data_rev_who_region$region_cost_cc2 <- data_rev_who_region$region_cost_cc1 * 5
-
-data_rev_who_region$region_cost_who1 <-ifelse(data_rev_who_region$measure_id == 2,
-                                              data_rev_who_region$region_number * data_rev_who_region$region_gdp_per_capita, 0)
-
-data_rev_who_region$region_cost_who2 <- data_rev_who_region$region_cost_who1 * 3
-
-
-
-# Deaths per capita
-
-map_deaths_per_cap_who_region <- 
-  data_rev_who_region %>% 
-  filter(measure_id== "1") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_number/region_pop100k), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Deaths due to mental disorders per 100,000",
-       subtitle="2019",
-       caption=caption,
-       fill="Deaths") +
-  scale_fill_distiller(palette = "RdYlBu",
-                       limits = c(0,100),
-                       oob = squish) +
-  coord_sf(ndiscr = F) + 
-  facet_grid(~estimate) 
-
-ggsave(filename = "fig1_who_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 4)
-
-
-# DALYS per capita
-
-map_dalys_per_cap_who_region <-
-  data_rev_who_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_number/region_pop100k), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="DALYs due to mental disorders per 100,000",
-       subtitle="2019",
-       caption=caption,
-       fill="DALYs") +
-  scale_fill_distiller(palette = "RdYlBu",
-                       limits = c(0,6000),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig2_who_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 4)
-
-# Percent of deaths
-
-map_deaths_percent_who_region <-
-  data_rev_who_region %>% filter(measure_id== "1") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_percent), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Deaths due to mental disorders, % of deaths",
-       subtitle="2019",
-       caption=caption,
-       fill="Percent") +
-  scale_fill_distiller(palette = "YlGn",
-                       direction = 1,
-                       limits = c(0,15),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig3_who_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 4)
-
-# Percent of DALYs
-
-map_dalys_percent_who_region <-
-  data_rev_who_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_percent), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="DALYs due to mental disorders, % of DALYs",
-       subtitle="2019",
-       caption=caption,
-       fill="Percent") +
-  scale_fill_distiller(palette = "YlGn",
-                       direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig4_who_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 4)
-
-
-# Value (CC1), % of GDP
-
-map_value_cc1_who_region <- 
-  data_rev_who_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle=subtitle_1,
-       caption=caption,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limit = c(0, 20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig5_who_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 3)
-
-# Value (CC2), % of GDP
-
-
-map_value_cc2_who_region <- 
-  data_rev_who_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100 * 5), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle=subtitle_2,
-       caption=caption,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limit = c(0, 20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig6_who_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 3)
-
-# Value (WHO1), % of GDP
-
-map_value_who1_who_region <- 
-  data_rev_who_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle=subtitle_3,
-       caption=caption,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig7_who_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 3)
-
-# Value (WHO2), % of GDP
-
-map_value_who2_who_region <- 
-  data_rev_who_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_who2/region_gdp * 100), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle=subtitle_4,
-       caption=caption,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-ggsave(filename = "fig8_who_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 3)
-
-# Combined value maps
-
-
-map_value_cc1_notitle_who_region <- 
-  data_rev_who_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title=subtitle_1,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limit = c(0, 20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-
-
-map_value_cc2_notitle_who_region <- 
-  data_rev_who_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100 * 5), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title=subtitle_2,
-       
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limit = c(0, 20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-
-
-map_value_who1_notitle_who_region <- 
-  data_rev_who_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title=subtitle_3,
-       
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-
-map_value_who2_notitle_who_region <- 
-  data_rev_who_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100 * 3), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(who_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title=subtitle_4,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-
-map_value_combined <- ggarrange(map_value_cc1_notitle_who_region, map_value_cc2_notitle_who_region, map_value_who1_notitle_who_region, map_value_who2_notitle_who_region,
-                                ncol = 1, nrow = 4, common.legend = TRUE, legend = "bottom")
-
-
-ggsave(filename = "fig9_who_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 8)
-
-
-
-
-
-# IHME regions
-
-
-
-data_rev_ihme_region <- data_rev_map_region %>% group_by(estimate, measure_id, ihme_region) %>% 
-  mutate(region_pop100k = sum(population_100k, na.rm=TRUE),
-         region_number = sum(number),
-         region_measure_total = sum(measure_total),
-         region_gdp = sum(gdp, na.rm=TRUE)
-  ) %>%
-  mutate(region_percent = region_number/region_measure_total*100,
-         region_population = region_pop100k * 100000)
-
-data_rev_ihme_region$region_gdp_per_capita <- data_rev_ihme_region$region_gdp/data_rev_ihme_region$region_population
-
-data_rev_ihme_region$region_cost_cc1 <- ifelse(data_rev_ihme_region$measure_id == 2,
-                                              data_rev_ihme_region$region_number * 1000, 0)
-
-data_rev_ihme_region$region_cost_cc2 <- data_rev_ihme_region$region_cost_cc1 * 5
-
-data_rev_ihme_region$region_cost_who1 <-ifelse(data_rev_ihme_region$measure_id == 2,
-                                              data_rev_ihme_region$region_number * data_rev_ihme_region$region_gdp_per_capita, 0)
-
-data_rev_ihme_region$region_cost_who2 <- data_rev_ihme_region$region_cost_who1 * 3
-
-
-
-# Deaths per capita
-
-map_deaths_per_cap_ihme_region <- 
-  data_rev_ihme_region %>% 
-  filter(measure_id== "1") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_number/region_pop100k), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Deaths due to mental disorders per 100,000",
-       subtitle="2019",
-       caption=caption,
-       fill="Deaths") +
-  scale_fill_distiller(palette = "RdYlBu",
-                       limits = c(0,100),
-                       oob = squish) +
-  coord_sf(ndiscr = F) + 
-  facet_grid(~estimate) 
-
-ggsave(filename = "fig1_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 4)
-
-
-# DALYS per capita
-
-map_dalys_per_cap_ihme_region <-
-  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_number/region_pop100k), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="DALYs due to mental disorders per 100,000",
-       subtitle="2019",
-       caption=caption,
-       fill="DALYs") +
-  scale_fill_distiller(palette = "RdYlBu",
-                       limits = c(0,6000),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig2_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 4)
-
-# Percent of deaths
-
-map_deaths_percent_ihme_region <-
-  data_rev_ihme_region %>% filter(measure_id== "1") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_percent), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Deaths due to mental disorders, % of deaths",
-       subtitle="2019",
-       caption=caption,
-       fill="Percent") +
-  scale_fill_distiller(palette = "YlGn",
-                       direction = 1,
-                       limits = c(0,15),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig3_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 4)
-
-# Percent of DALYs
-
-map_dalys_percent_ihme_region <-
-  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_percent), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="DALYs due to mental disorders, % of DALYs",
-       subtitle="2019",
-       caption=caption,
-       fill="Percent") +
-  scale_fill_distiller(palette = "YlGn",
-                       direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig4_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 4)
-
-
-# Value (CC1), % of GDP
-
-map_value_cc1_ihme_region <- 
-  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle=subtitle_1,
-       caption=caption,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limit = c(0, 20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig5_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 3)
-
-# Value (CC2), % of GDP
-
-
-map_value_cc2_ihme_region <- 
-  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100 * 5), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle=subtitle_2,
-       caption=caption,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limit = c(0, 20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig6_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 3)
-
-# Value (WHO1), % of GDP
-
-map_value_who1_ihme_region <- 
-  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle=subtitle_3,
-       caption=caption,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig7_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 3)
-
-# Value (WHO2), % of GDP
-
-map_value_who2_ihme_region <- 
-  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100 * 3), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle=subtitle_4,
-       caption=caption,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-ggsave(filename = "fig8_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 3)
-
-# Combined value maps
-
-
-map_value_cc1_notitle_ihme_region <- 
-  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title=subtitle_1,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limit = c(0, 20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-
-
-map_value_cc2_notitle_ihme_region <- 
-  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_cc1/region_gdp * 100 * 5), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title=subtitle_2,
-
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limit = c(0, 20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-
-
-map_value_who1_notitle_ihme_region <- 
-  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title=subtitle_3,
-       
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-
-map_value_who2_notitle_ihme_region <- 
-  data_rev_ihme_region %>% filter(measure_id== "2") %>% 
-  filter(estimate_id %in% c(1,2,4)) %>% 
-  ggplot() +
-  geom_sf(mapping = aes(fill = region_cost_who1/region_gdp * 100 * 3), color = "white", size = 0.01) +
-  geom_sf(data = . %>%   group_by(ihme_region) %>% st_set_precision(1e4) %>%
-            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
-  labs(title=subtitle_4,
-       fill="% of GDP") +
-  scale_fill_distiller(palette = "Reds", direction = 1,
-                       limits = c(0,20),
-                       oob = squish) +
-  facet_grid(~estimate)
-
-
-map_value_combined <- ggarrange(map_value_cc1_notitle_ihme_region, map_value_cc2_notitle_ihme_region, map_value_who1_notitle_ihme_region, map_value_who2_notitle_ihme_region,
-                                ncol = 1, nrow = 4, common.legend = TRUE, legend = "bottom")
-
-
-ggsave(filename = "fig9_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 8)
-
-
-
-############################
-##        TABLES          ##
-############################
-
-# Table 1: Burden of disease due to mental disorders
-
-# Global
-data_global <- data_rev %>% filter(location_id == 1)
-table1 <- data_global  %>% select(measure_id, estimate, number, percent)
-table1$percent <- round(table1$percent, 2)
-table1$number <- round(table1$number/1000000,3)
-
-write.csv(table1, file = "results/table1_global_val.csv")
-
-# Regional
-table1 <- data_rev %>% filter(estimate_id != 3) %>% 
-  filter(location_id != 1)%>% 
-  select(measure_id, iso_code, measure_total, estimate, number)
-
-
-# Adding regions
-region <- read_excel(path = file.path(datapath, "regions.xlsx"))
-region <- region %>% select (iso_code, continent, who_region, ihme_region)
-table1 <- left_join(table1, region, by = "iso_code")
-
-table1 <- table1 %>% group_by(who_region, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
-                                                                 region_dalymh = sum(number))
-
-table1$percent <- round(table1$region_dalymh/table1$region_dalytotal*100, 2)
-table1 <- table1 %>% ungroup() %>% select(measure_id, who_region, estimate, region_dalymh, percent) %>% unique()
-table1$region_dalymh <- round(table1$region_dalymh/1000000,3)
-
-write.csv(table1, file = "results/table1_region_val.csv")
-
-# Income level
-
-table1 <- data_rev %>% filter(estimate_id != 3) %>% 
-  filter(location_id != 1)%>% 
-  select(income_level, measure_id, measure_total, estimate, number)
-
-table1 <- table1 %>% group_by(measure_id, income_level, estimate) %>% mutate(income_level_dalytotal = sum(measure_total),
-                                                       income_level_dalymh = sum(number))
-
-table1$percent <- round(table1$income_level_dalymh/table1$income_level_dalytotal*100, 2)
-table1 <- table1 %>% ungroup() %>% select(income_level, measure_id, estimate, income_level_dalymh, percent) %>% unique() 
-
-table1$income_level_dalymh <- round(table1$income_level_dalymh/1000000,3)
-
-write.csv(table1, file = "results/table1_income_val.csv")
-
-rm(table1, region)
-
-# Table 2: Value of economic welfare estimates 
-
-table2 <- data_global %>% filter(estimate_id != 3) %>% select(estimate, cost_cc1, cost_cc2, cost_who1, cost_who2)
-table2$cost_cc1 <- round(table2$cost_cc1/1000000000000,2)
-table2$cost_cc2 <- round(table2$cost_cc2/1000000000000,2)
-table2$cost_who1 <- round(table2$cost_who1/1000000000000,2)
-table2$cost_who2 <- round(table2$cost_who2/1000000000000,2)
-table2_t <- transpose(table2)
-
-colnames(table2_t) <- rownames(table2)
-rownames(table2_t) <- colnames(table2)
-
-write.csv(table2_t, file = "results/table2_val.csv")
-rm(table2, table2_t)
-
-
-
-############################
-##         CHARTS           ##
-############################
-
-
-data_rev_who_region_1 <- data_rev_who_region %>% select(c(estimate, estimate_id, measure_id, who_region, region_pop100k:region_cost_who2)) %>% st_drop_geometry()
-data_rev_who_region_1 <- data_rev_who_region_1  %>% filter(estimate_id %in% c(1,2,4)) %>% unique()
-
-
-chart_1_who_region <- 
-  
-  data_rev_who_region_1 %>% 
-  filter(measure_id== "2") %>% 
-  filter(!is.na(who_region)) %>%
-  ggplot(aes(x = who_region, fill=who_region, y=region_percent)) +
-  geom_bar(stat="identity")+
-  labs(title="DALYs due to mental disorders, % of DALYs",
-       subtitle="2019",
-       caption=caption,
-       x = "",
-       y = "Percent of DALYs",
-       fill="Region") +
-  facet_grid(~estimate) + 
-  theme(panel.grid.major.y =  element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) 
-
-
-ggsave(filename = "fig10_who_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 8)
-
-
-chart_2_who_region <- 
-
-  data_rev_who_region_1 %>% 
-  filter(measure_id== "1") %>% 
-  filter(!is.na(who_region)) %>%
-  ggplot(aes(x = who_region, fill=who_region, y=region_percent)) +
-  geom_bar(stat="identity")+
-  labs(title="Deaths due to mental disorders, % of deaths",
-       subtitle="2019",
-       caption=caption,
-       x = "",
-       y = "Percent of deaths",
-       fill="Region") +
-  facet_grid(~estimate) + 
-  theme(panel.grid.major.y =  element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) 
-
-
-ggsave(filename = "fig11_who_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 8)
-
-
-chart_3_who_region <- 
-  
-  data_rev_who_region_1 %>% 
-  filter(measure_id== "2") %>% 
-  filter(!is.na(who_region)) %>%
-  ggplot(aes(x = who_region, fill=who_region, y=region_cost_who1/region_gdp*100)) +
-  geom_bar(stat="identity")+
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle="Value per DALY: GDP/capita",
-       caption=caption,
-       x = "",
-       y = "Percent of GDP",
-       fill="Region") +
-  facet_grid(~estimate) + 
-  theme(panel.grid.major.y =  element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  geom_text(aes(label=round(region_cost_who1/region_gdp*100,1)), vjust=1.6, color="black", size=3.5)
-
-
-ggsave(filename = "fig12_who_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 8)
-
-
-data_rev_ihme_region_1 <- data_rev_ihme_region %>% select(c(estimate, estimate_id, measure_id, ihme_region, region_pop100k:region_cost_who2)) %>% st_drop_geometry()
-data_rev_ihme_region_1 <- data_rev_ihme_region_1  %>% filter(estimate_id %in% c(1,2,4)) %>% unique()
-
-ihme_positions <- c("East Asia", "Southeast Asia", "Oceania", "Central Asia", "Eastern Europe", "Central Europe",
-                    "Caribbean", "Central Latin America", "Tropical Latin America", "Andean Latin America", "North Africa and Middle East",
-                    "Southern Sub-Saharan Africa", "Western Sub-Saharan Africa", "Central Sub-Saharan Africa", "Eastern Sub-Saharan Africa",
-                    "South Asia", "Southern Latin America", "Western Europe", "High-income North America",
-                    "Australasia", "High-income Asia Pacific", "#NA")
+caption <- "Source: Global Burden of Disease Study. Reallocation method from Vigo et al. 2016."
+
+###############################
+##        NATIONAL           ##
+###############################
+
+# Loops are used to create consistent maps at the national and regional levels
+
+n = 1
+mapping <- c("who_region", "ihme_region")
+measures <- c(1,2)
+metric <- c("rate_per_100k", "percent")
+monetaryvalue <- c("cost_cc1", "cost_cc2", "cost_who1", "cost_who2")
+comparison <- c("abs", "diff")
+
+for(k in metric){
+  for(j in measures){
+    for (m in comparison){
+      
+      data_rev_map %>% 
+        filter(measure_id== j) %>% 
+        filter(estimate_id %in%  c(ifelse(m =="diff","",1), 2,4)) %>% 
+        ggplot() +
+        geom_sf(mapping = aes(fill = get(paste0(k,ifelse(m =="diff", "_diff","")))), color = "black", size = 0.01) +
+        theme(panel.grid.major = element_blank(), 
+              panel.background = element_blank(),
+              axis.title = element_blank(), 
+              axis.text = element_blank(),
+              axis.ticks = element_blank()) +
+        labs(title=paste0(ifelse(m =="diff" && j==1 && k == "rate_per_100k", 
+                                 "Difference in number of deaths due to mental disorders per 100,000, relative to GBD 2019",
+                                 ifelse(m =="diff" && j==2 && k == "rate_per_100k", 
+                                        "Difference in number of DALYs due to mental disorders per 100,000, relative to GBD 2019",
+                                        ifelse(m =="diff" && j==1 && k != "rate_per_100k", 
+                                               "Percentage point difference in percent of deaths due to mental disorders, relative to GBD 2019",
+                                               ifelse(m =="diff" && j==2 && k != "rate_per_100k",
+                                                      "Percentage point difference in percent of DALYs due to mental disorders, relative to GBD 2019",
+                                                      paste0(ifelse(j==1,"Deaths", "DALYs")," due to mental disorders", paste0(ifelse(k=="rate_per_100k"," per 100,000", ", % of total")))))))), 
+             subtitle="2019",
+             caption=caption,
+             fill=
+               ifelse(j == 1, ifelse(k == "rate_per_100k", "Deaths", "% of deaths"),
+                      ifelse(k == "percent", "% of DALYs", "DALYs"))) +
+        scale_fill_distiller(palette = ifelse(k == "rate_per_100k","RdYlBu", "YlGn"),
+                             direction = ifelse(k == "rate_per_100k",-1, 1)) +
+        coord_sf(ndiscr = F) + 
+        facet_grid(~estimate) 
+      
+      
+      ggsave(filename = paste0("fig", n,"_",m,".png"), plot = last_plot(), 
+             path = resultspath,
+             width = 10,
+             height = 4)
+      
+    }
+    
+    n <- n + 1
+    
+  }
+}
+
+n = 5
+
+for (l in monetaryvalue) {
+  for (m in comparison) {
+    
+    data_rev_map %>%
+      filter(measure_id== 2) %>% 
+      filter(estimate_id %in%  c(ifelse(m =="diff","",1), 2,4)) %>% 
+      ggplot() +
+      geom_sf(mapping = aes(fill = get(paste0(l, ifelse(m =="diff", "_diff","")))/ gdp * 100), color = "black", size = 0.01) +
+      theme(panel.grid.major = element_blank(), 
+            panel.background = element_blank(),
+            axis.title = element_blank(), 
+            axis.text = element_blank(),
+            axis.ticks = element_blank()) +
+      labs(title=ifelse(m =="diff", "Difference in value of DALYs due to mental disorders in current USD, percentage points of GDP", 
+                        "Value of DALYs due to mental disorders in current USD, % of GDP"),
+           subtitle=get(paste0("subtitle_",(n-4))),
+           caption=caption,
+           fill="% of GDP") +
+      scale_fill_distiller(palette = "Reds", direction = 1,
+                           limits = c(0,20),
+                           oob = squish) +
+      facet_grid(~estimate)
+    
+    ggsave(filename = paste0("fig", n,"_",m,".png"), plot = last_plot(), 
+           path = resultspath,
+           width = 10,
+           height = 4)
+    
+    
+  }
+  n <- n + 1
+}
+
+###############################
+##        REGIONAL           ##
+###############################
+
+n = 1
+
+for(k in metric){
+  for(j in measures){
+    for (m in comparison){
+      for (i in mapping) {
+        
+        data_rev_map %>% 
+          filter(measure_id== j) %>% 
+          filter(estimate_id %in%  c(ifelse(m =="diff","",1), 2,4)) %>% 
+          ggplot() +
+          geom_sf(mapping = aes(fill = get(paste0(i,"_",k,ifelse(m =="diff", "_diff","")))), color = "white", size = 0.01) +
+          geom_sf(data = . %>%   group_by(get(i)) %>% st_set_precision(1e4) %>%
+                    summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+          theme(panel.grid.major = element_blank(), 
+                panel.background = element_blank(),
+                axis.title = element_blank(), 
+                axis.text = element_blank(),
+                axis.ticks = element_blank()) +
+          labs(title=paste0(ifelse(m =="diff" && j==1 && k == "rate_per_100k", 
+                                   "Difference in number of deaths due to mental disorders per 100,000, relative to GBD 2019",
+                                   ifelse(m =="diff" && j==2 && k == "rate_per_100k", 
+                                          "Difference in number of DALYs due to mental disorders per 100,000, relative to GBD 2019",
+                                          ifelse(m =="diff" && j==1 && k != "rate_per_100k", 
+                                                 "Percentage point difference in percent of deaths due to mental disorders, relative to GBD 2019",
+                                                 ifelse(m =="diff" && j==2 && k != "rate_per_100k",
+                                                        "Percentage point difference in percent of DALYs due to mental disorders, relative to GBD 2019",
+                                                        paste0(ifelse(j==1,"Deaths", "DALYs")," due to mental disorders", paste0(ifelse(k=="rate_per_100k"," per 100,000", ", % of total")))))))), 
+               subtitle="2019",
+               caption=caption,
+               fill=
+                 ifelse(j == 1, ifelse(k == "rate_per_100k", "Deaths", "% of deaths"),
+                        ifelse(k == "percent", "% of DALYs", "DALYs"))) +
+          scale_fill_distiller(palette = ifelse(k == "rate_per_100k","RdYlBu", "YlGn"),
+                               direction = ifelse(k == "rate_per_100k",-1, 1)) +
+          coord_sf(ndiscr = F) + 
+          facet_grid(~estimate) 
+        
+        ggsave(filename = paste0("fig", n,"_",i,"_",m,".png"), plot = last_plot(), 
+               path = resultspath,
+               width = 10,
+               height = 4)
+        
+      }
+    }
+    n <- n + 1
+  }
+}
+
+n = 5
+
+for (l in monetaryvalue) {
+  for (m in comparison) {
+    for (i in mapping) {
+      
+      data_rev_map %>%
+        filter(measure_id== 2) %>% 
+        filter(estimate_id %in%  c(ifelse(m =="diff","",1), 2,4)) %>% 
+        ggplot() +
+        geom_sf(mapping = aes(fill = get(paste0(i,"_",l, ifelse(m =="diff", "_diff","")))/ get(paste0(i,"_","gdp")) * 100), color = "white", size = 0.01) +
+        geom_sf(data = . %>%   group_by(get(i)) %>% st_set_precision(1e4) %>%
+                  summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+        theme(panel.grid.major = element_blank(), 
+              panel.background = element_blank(),
+              axis.title = element_blank(), 
+              axis.text = element_blank(),
+              axis.ticks = element_blank()) +
+        labs(title=ifelse(m =="diff", "Difference in value of DALYs due to mental disorders in current USD, percentage points of GDP, relative to GBD 2019", 
+                          "Value of DALYs due to mental disorders in current USD, % of GDP"),
+             subtitle=get(paste0("subtitle_",(n-4))),
+             caption=caption,
+             fill="% of GDP") +
+        scale_fill_distiller(palette = "Reds", direction = 1,
+                             limits = c(0,20),
+                             oob = squish) +
+        facet_grid(~estimate)
+      
+      ggsave(filename = paste0("fig", n,"_",i,"_",m,".png"), plot = last_plot(), 
+             path = resultspath,
+             width = 10,
+             height = 4)
+      
+    }
+  }
+  n <- n + 1
+}
+
+rm(data_rev_map)
+
+####################################
+##       REGIONAL CHARTS          ##
+####################################
+
+who_region_positions <- c("African Region", "Eastern Mediterranean Region", "European Region",
+                          "Region of the Americas", "South-East Asia Region", "Western Pacific Region",  "#NA")
+
+who_region_pal <-  c("#E74C3C", "#E67E22" , "#F4D03F", "#45B39D", "#5499C7", "#AF7AC5")
+
+ihme_region_positions <- c("East Asia", "Southeast Asia", "Oceania", "Central Asia", "Eastern Europe", "Central Europe",
+                           "Caribbean", "Central Latin America", "Tropical Latin America", "Andean Latin America", "North Africa and Middle East",
+                           "Southern Sub-Saharan Africa", "Western Sub-Saharan Africa", "Central Sub-Saharan Africa", "Eastern Sub-Saharan Africa",
+                           "South Asia", "Southern Latin America", "Western Europe", "High-income North America",
+                           "Australasia", "High-income Asia Pacific", "#NA")
 
 ihme_pal_new <- c("#002673", "#005CE6", "#73DFFF", "#E54800", "#E69800", "#FFD37F",
-              "#216F00", "#33A600", "#4CE600", "#A3FF73", "#4E4E4E", 
-              "#730000", "#FF0000", "#FF7F7F", "#FFBEBE", 
-              "#E6E600", "#73004C", "#A80084", "#C500FF", "#E600A9", "#FFBEE8", "#7F7F7F")
+                  "#216F00", "#33A600", "#4CE600", "#A3FF73", "#4E4E4E", 
+                  "#730000", "#FF0000", "#FF7F7F", "#FFBEBE", 
+                  "#E6E600", "#73004C", "#A80084", "#C500FF", "#E600A9", "#FFBEE8", "#7F7F7F")
 
-ihme_pal <- c("#8C95F1", "#D7ECFC" , "#B6CDD4", "#EAA144", "#F3DA89", "#F9EFC2", "#B1F585", "#B6F2D5",
-              "#E3FD8C", "#E2FDD7", "#99ACA4", "#9D5F56", "#E989A9", "#F5DBD8", "#F8EEEF",
-              "#F4FF7C", "#C42AF1", "#E986F8", "#D7C2FC", "#DD9BE9", "#FAE5FE", "#7F7F7F")
+ihme_region_pal <- c("#8C95F1", "#D7ECFC" , "#B6CDD4", "#EAA144", "#F3DA89", "#F9EFC2", "#B1F585", "#B6F2D5",
+                     "#E3FD8C", "#E2FDD7", "#99ACA4", "#9D5F56", "#E989A9", "#F5DBD8", "#F8EEEF",
+                     "#F4FF7C", "#C42AF1", "#E986F8", "#D7C2FC", "#DD9BE9", "#FAE5FE", "#7F7F7F")
 
-chart_1_ihme_region <- 
-  
-  data_rev_ihme_region_1 %>% 
-  filter(measure_id== "2") %>% 
-  filter(!is.na(ihme_region)) %>%
-  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
-  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_percent)) +
-  geom_bar(stat="identity")+
-  labs(title="DALYs due to mental disorders, % of DALYs",
-       subtitle="2019",
-       caption=caption,
-       x = "",
-       y = "Percent of DALYs",
-       fill="Region") +
-  facet_grid(~estimate) + 
-  theme(panel.grid.major.y =  element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())  + 
-  scale_fill_manual(name = "Region", values = ihme_pal)
+n = 9
 
+for(j in measures){
+  for (m in comparison){
+    for (i in mapping) {
+      
+      data_rev %>% 
+        filter(numeric_name == "val") %>%
+        {if(i == "who_region") select(.,measure_id,estimate, estimate_id, who_region, who_region_pop100k:who_region_cost_who2_diff)
+          else select(.,measure_id, estimate, estimate_id, ihme_region, ihme_region_pop100k:ihme_region_cost_who2_diff)} %>% unique %>%
+        filter(measure_id== j) %>% 
+        filter(estimate_id %in%  c(ifelse(m =="diff","",1), 2,4)) %>% 
+        filter(!is.na(get(i))) %>%
+        mutate(region = factor(get(i) , levels =  get(paste0(i,"_positions")))) %>%
+        ggplot(aes(x = region, fill=region, y=get(paste0(i,"_percent",ifelse(m =="diff", "_diff",""))))) +
+        geom_bar(stat="identity") +
+        labs(title=paste0(ifelse(m =="diff" && j==1 && k == "rate_per_100k", 
+                                 "Difference in number of deaths due to mental disorders per 100,000, relative to GBD 2019",
+                                 ifelse(m =="diff" && j==2 && k == "rate_per_100k", 
+                                        "Difference in number of DALYs due to mental disorders per 100,000, relative to GBD 2019",
+                                        ifelse(m =="diff" && j==1 && k != "rate_per_100k", 
+                                               "Percentage point difference in percent of deaths due to mental disorders, relative to GBD 2019",
+                                               ifelse(m =="diff" && j==2 && k != "rate_per_100k",
+                                                      "Percentage point difference in percent of DALYs due to mental disorders, relative to GBD 2019",
+                                                      paste0(ifelse(j==1,"Deaths", "DALYs")," due to mental disorders", paste0(ifelse(k=="rate_per_100k"," per 100,000", ", % of total")))))))), 
+             subtitle="2019",
+             caption=caption,
+             fill=
+               ifelse(j == 1, ifelse(k == "rate_per_100k", "Deaths", "% of deaths"),
+                      ifelse(k == "percent", "% of DALYs", "DALYs"))) +
+        facet_grid(~estimate) + 
+        theme(panel.grid.major.y =  element_blank(), 
+              panel.background = element_blank(),
+              axis.title = element_blank(), 
+              axis.text.x = element_blank(),
+              axis.ticks.x = element_blank())  + 
+        geom_text(aes(label=round(get(paste0(i,"_percent",ifelse(m =="diff", "_diff",""))),1)), vjust=1.6, color="black", size=ifelse(i =="who_region",2.5, 1.5)) +
+        scale_fill_manual(name = "Region", values = get(paste0(i,"_pal")))
+      
+      ggsave(filename = paste0("fig", n,"_",i,"_",m,".png"), plot = last_plot(), 
+             path = resultspath,
+             width = 10,
+             height = 4)
+    }
+  }
+  n <- n + 1
+}
 
-ggsave(filename = "fig10_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 8)
+n = 11
 
-
-chart_2_ihme_region <- 
-  
-  data_rev_ihme_region_1 %>% 
-  filter(measure_id== "1") %>% 
-  filter(!is.na(ihme_region)) %>%
-  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
-  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_percent)) +
-  geom_bar(stat="identity")+
-  labs(title="Deaths due to mental disorders, % of deaths",
-       subtitle="2019",
-       caption=caption,
-       x = "",
-       y = "Percent of deaths",
-       fill="Region") +
-  facet_grid(~estimate) + 
-  theme(panel.grid.major.y =  element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())  + 
-  scale_fill_manual(name = "Region", values = ihme_pal)
-
-
-ggsave(filename = "fig11_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 10,
-       height = 8)
-
-
-
-chart_3_ihme_region <- 
-  
-  data_rev_ihme_region_1 %>% 
-  filter(measure_id== "2") %>% 
-  filter(!is.na(ihme_region)) %>%
-  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
-  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_cost_who1/region_gdp*100)) +
-  geom_bar(stat="identity")+
-  labs(title="Value of DALYs due to mental disorders in current USD, % of GDP",
-       subtitle="Value per DALY: GDP/capita",
-       caption=caption,
-       x = "",
-       y = "Percent of GDP") +
-  facet_grid(~estimate) + 
-  theme(panel.grid.major.y =  element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  geom_text(aes(label=round(region_cost_who1/region_gdp*100,1)), vjust=1.6, color="black", size=2) + 
-  scale_fill_manual(name = "Region", values = ihme_pal)
-                      
-
-
-ggsave(filename = "fig12_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 13,
-       height = 4)
-
-chart_3_cc1_notitle_ihme_region <- 
-  
-  data_rev_ihme_region_1 %>% 
-  filter(measure_id== "2") %>% 
-  filter(!is.na(ihme_region)) %>%
-  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
-  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_cost_cc1/region_gdp*100)) +
-  geom_bar(stat="identity")+
-  labs(title="Value per DALY: $1,000",
-       x = "",
-       y = "Percent of GDP") +
-  facet_grid(~estimate) + 
-  theme(panel.grid.major.y =  element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  geom_text(aes(label=round(region_cost_cc1/region_gdp*100,1)), vjust=1.6, color="black", size=2.5) + 
-  coord_cartesian(ylim = c(0, 25)) + 
-  scale_fill_manual(name = "Region", values = ihme_pal)
-
-chart_3_cc2_notitle_ihme_region <- 
-  
-  data_rev_ihme_region_1 %>% 
-  filter(measure_id== "2") %>% 
-  filter(!is.na(ihme_region)) %>%
-  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
-  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_cost_cc2/region_gdp*100)) +
-  geom_bar(stat="identity")+
-  labs(title="Value per DALY: $5,000",
-       x = "",
-       y = "Percent of GDP") +
-  facet_grid(~estimate) + 
-  theme(panel.grid.major.y =  element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  geom_text(aes(label=round(region_cost_cc2/region_gdp*100,1)), vjust=1.6, color="black", size=2.5) +
-  coord_cartesian(ylim = c(0, 25)) + 
-  scale_fill_manual(name = "Region", values = ihme_pal)
+for (l in monetaryvalue) {
+  for (m in comparison) {
+    for (i in mapping) {
+      
+      data_rev %>% 
+        filter(numeric_name == "val") %>%
+        {if(i == "who_region") select(.,measure_id,estimate, estimate_id, who_region, who_region_pop100k:who_region_cost_who2_diff)
+          else select(.,measure_id, estimate, estimate_id, ihme_region, ihme_region_pop100k:ihme_region_cost_who2_diff)} %>% unique %>%
+        filter(measure_id== "2") %>% 
+        filter(estimate_id %in%  c(ifelse(m =="diff","",1), 2,4)) %>% 
+        filter(!is.na(get(i))) %>%
+        mutate(region = factor(get(i) , levels =  get(paste0(i,"_positions")))) %>%
+        ggplot(aes(x = region, fill=region, y=get(paste0(i,"_percent",ifelse(m =="diff", "_diff",""))))) +
+        geom_bar(stat="identity") +
+        
+        labs(title=ifelse(m =="diff", "Difference in value of DALYs due to mental disorders in current USD, percentage points of GDP, relative to GBD 2019", 
+                          "Value of DALYs due to mental disorders in current USD, % of GDP"),
+             subtitle=get(paste0("subtitle_",(n-4-6))),
+             caption=caption,
+             fill="% of GDP") +
+        facet_grid(~estimate) + 
+        theme(panel.grid.major.y =  element_blank(), 
+              panel.background = element_blank(),
+              axis.title = element_blank(), 
+              axis.text.x = element_blank(),
+              axis.ticks.x = element_blank())  + 
+        geom_text(aes(label=round(get(paste0(i,"_percent",ifelse(m =="diff", "_diff",""))),1)), vjust=1.6, color="black", size=ifelse(i =="who_region",2.5, 1.5)) +
+        scale_fill_manual(name = "Region", values = get(paste0(i,"_pal")))
+      
+      ggsave(filename = paste0("fig", n,"_",i,"_",m,".png"), plot = last_plot(), 
+             path = resultspath,
+             width = 10,
+             height = 4)
+    }
+  }
+  n <- n + 1
+}
 
 
-
-chart_3_who1_notitle_ihme_region <- 
-  
-  data_rev_ihme_region_1 %>% 
-  filter(measure_id== "2") %>% 
-  filter(!is.na(ihme_region)) %>%
-  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
-  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_cost_who1/region_gdp*100)) +
-  geom_bar(stat="identity")+
-  labs(title="Value per DALY: GDP/capita",
-       x = "",
-       y = "Percent of GDP") +
-  facet_grid(~estimate) + 
-  theme(panel.grid.major.y =  element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  geom_text(aes(label=round(region_cost_who1/region_gdp*100,1)), vjust=1.6, color="black", size=2.5) +
-  coord_cartesian(ylim = c(0, 25)) + 
-  scale_fill_manual(name = "Region", values = ihme_pal)
-
-
-chart_3_who2_notitle_ihme_region <- 
-  
-  data_rev_ihme_region_1 %>% 
-  filter(measure_id== "2") %>% 
-  filter(!is.na(ihme_region)) %>%
-  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
-  ggplot(aes(x = ihme_region, fill=ihme_region, y=region_cost_who2/region_gdp*100)) +
-  geom_bar(stat="identity")+
-  labs(title="Value per DALY: 3 X GDP/capita",
-       x = "",
-       y = "Percent of GDP") +
-  facet_grid(~estimate) + 
-  theme(panel.grid.major.y =  element_blank(), 
-        panel.background = element_blank(),
-        axis.title = element_blank(), 
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  geom_text(aes(label=round(region_cost_who2/region_gdp*100,1)), vjust=1.6, color="black", size=2.5) +
-  coord_cartesian(ylim = c(0, 25)) + 
-  scale_fill_manual(name = "Region", values = ihme_pal)
-
-
-
-combo_chart_3_notitle_ihme_region <- ggarrange(chart_3_cc1_notitle_ihme_region,
-                                chart_3_cc2_notitle_ihme_region,
-                                common.legend = TRUE,
-                                legend = "bottom",
-                                ncol = 1, nrow = 2)
-
-
-ggsave(filename = "fig13_ihme_region.png", plot = last_plot(), 
-       path = resultspath,
-       width = 13,
-       height = 8)
-
-combo_chart_3_notitle_ihme_region_sa <- ggarrange(chart_3_who1_notitle_ihme_region,
-                                               chart_3_who2_notitle_ihme_region,
-                                               common.legend = TRUE,
-                                               legend = "bottom",
-                                               ncol = 1, nrow = 2)
-
-
-ggsave(filename = "fig13_ihme_region_sa.png", plot = last_plot(), 
-       path = resultspath,
-       width = 13,
-       height = 8)
+######################
+# Figure of GBD Inputs by IHME region
+######################
 
 data_rev_ihme_inputs <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-inputs.csv"))
 data_rev_ihme_inputs <- data_rev_ihme_inputs %>% gather(inputs_mental:inputs_all,key = "input", value = "count")
@@ -1754,10 +833,10 @@ chart_4_gbdinputs_ihme_region_percent <-
   ggtitle("Share of cause-specific inputs") +
   scale_fill_manual(name = "Region", values = ihme_pal) + 
   scale_x_discrete(limit = c("inputs_mental", "inputs_maternal"),
-                     labels = c(
-                       
-                       expression(paste("Mental disorders \n         (n=2870)" )),
-                       expression(paste("Maternal and neonatal disorders \n                    (n=6149)" ))))
+                   labels = c(
+                     
+                     expression(paste("Mental disorders \n         (n=2870)" )),
+                     expression(paste("Maternal and neonatal disorders \n                    (n=6149)" ))))
 
 chart_4_gbdinputs_ihme_region_stacked <- 
   data_rev_ihme_inputs %>% 
@@ -1780,480 +859,230 @@ chart_4_gbdinputs_ihme_region_stacked <-
 
 combo_chart_4_gbdinputs_ihme_region <- ggarrange(chart_4_gbdinputs_ihme_region_stacked,
                                                  chart_4_gbdinputs_ihme_region_percent,
-                                               common.legend = TRUE,
-                                               legend = "bottom",
-                                               ncol = 2, nrow = 1)
+                                                 common.legend = TRUE,
+                                                 legend = "bottom",
+                                                 ncol = 2, nrow = 1)
 
 
- ggsave(filename = "fig14_ihme_region.png", plot = last_plot(), 
-        path = resultspath,
-        width = 13,
-        height = 8)
- 
- 
- 
- data_rev_ihme_region_1 %>% 
-   filter(measure_id== "2") %>% 
-   filter(!is.na(ihme_region)) %>%
-   mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
-   ggplot(aes(x = ihme_region, fill=ihme_region, y=region_cost_who1/region_gdp*100)) +
-   geom_bar(stat="identity")+
-   labs(title="Value per DALY: GDP/capita",
-        x = "",
-        y = "Percent of GDP") +
-   facet_grid(~estimate) + 
-   theme(panel.grid.major.y =  element_blank(), 
-         panel.background = element_blank(),
-         axis.title = element_blank(), 
-         axis.text.x = element_blank(),
-         axis.ticks.x = element_blank()) +
-   geom_text(aes(label=round(region_cost_who1/region_gdp*100,1)), vjust=1.6, color="black", size=2.5) +
-   scale_fill_manual(name = "Region", values = ihme_pal)
- 
- ggsave(filename = "fig13_ihme_region_GDPcap.png", plot = last_plot(), 
-        path = resultspath,
-        width = 13,
-        height = 8)
- 
-
-#################
-# Lower bounds
-
-
-# Loading IHME Global Burden of Disease Data
-data <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-1.csv"))
-ihme_crosswalk <- read_excel(path = file.path(datapath, "ihme_crosswalk.xlsx")) %>% 
-  select(-c("location_name"))
-data <- left_join(data, ihme_crosswalk, by = "location_id")
-rm(ihme_crosswalk) 
-income_level <- read_excel(path = file.path(datapath, "OGHIST.xls"), sheet = 2) %>% 
-  select(-(c(2:34))) %>% 
-  rename("income_level" = "2019")
-data <- left_join(data, income_level, by = "iso_code")
-rm(income_level) 
-data <- data %>% unique() %>% gather("numeric_name", "est", "val":"lower") 
-data_number <- data %>% filter(metric_id == 1) %>% rename("number" = "est")
-data_rate <- data %>% filter(metric_id == 3) 
-data_rate <- data %>% select("measure_id","location_id", "sex_id", "age_id", "cause_id", "year", "numeric_name", "est") %>% rename("rate" = "est")
-data <- left_join(data_number, data_rate, by = c("measure_id","location_id", "sex_id", "age_id", "cause_id", "year", "numeric_name"))
-rm(data_number, data_rate)
-
-# Select lower estimates
-data <- data %>% unique() %>% filter(numeric_name == "lower") %>% spread(numeric_name, number)
-data <- data %>% rename("val" = "lower")
-data$population <- data$val/data$rate
-data <- data %>% filter(population != 1) %>% unique()
-
-mental_disorder_cause_id <- 558
-dementia_cause_id <- c(543, 544)
-epilepsy_cause_id <- 545
-migraine_cause_id <- 547
-tension_type_headache_cause_id <- 548
-self_harm <- 718
-musculoskeletal_cause_id <- 626
-all_cause_id <- 294
-
-revision_full <- c(mental_disorder_cause_id,
-                   dementia_cause_id,
-                   epilepsy_cause_id,
-                   migraine_cause_id,
-                   tension_type_headache_cause_id,
-                   self_harm)
-
-no_revision <- musculoskeletal_cause_id
-
-inclusion <- c(mental_disorder_cause_id,
-               dementia_cause_id,
-               epilepsy_cause_id,
-               migraine_cause_id,
-               tension_type_headache_cause_id,
-               self_harm,
-               musculoskeletal_cause_id,
-               all_cause_id)
-
-data_vigo <- data %>% filter(cause_id %in% inclusion)
-
-data_vigo$mh_gbd <- ifelse(data_vigo$cause_id == mental_disorder_cause_id, 1, 0)  # Fully retain existing mental disorders
-data_vigo$mh_vigo <- ifelse(data_vigo$cause_id %in% revision_full, 1, 0)          # Allocate 100% of these conditions
-data_vigo$mh_vigo[data_vigo$cause_id %in% no_revision] <- 0                  # Allocate 0% of these conditions
-data_vigo$all <- ifelse(data_vigo$cause_id == all_cause_id, 1, 0)                 # Binary in case of all_cause 
-data_vigo$value <- data_vigo$val * data_vigo$mh_gbd                               # Retain original IHME values
-data_vigo$value_rev <- data_vigo$val * data_vigo$mh_vigo                          # Apply allocation percents against original IHME values
-
-data_vigo <- data_vigo %>% 
-  group_by(location_id, measure_id, sex_id, age_id, metric_id) %>% 
-  mutate(mh_value_agg_rev = sum(value_rev), mh_value_agg = sum(value))
-
-data_rev <- data_vigo %>%
-  filter(cause_id == "294") %>% #Filters to all causes; data_gh$val == total burden by location id
-  filter(metric_id == "1") %>%  #Filters to numeric metric
-  rename("Revised - Vigo et al. method" = mh_value_agg_rev, "Original" = mh_value_agg, "measure_total" = val) %>%
-  filter(measure_id %in% 1:4) %>% #Retains only deaths, DALYS, YLDs, and YLLs
-  ungroup %>%
-  select(c(1:4, 13:15, 17:18,24:25))
-
-data_prev <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-prev.csv"))
-
-mental_disorder_cause_id <- 558
-schizophrenia_cause_id <- 559
-depressive_cause_id <- 567
-bipolar_cause_id <- 570
-anxiety_cause_id <- 571 
-
-relative_risk <- data.frame(
-  c(mental_disorder_cause_id,
-    schizophrenia_cause_id,
-    depressive_cause_id,
-    bipolar_cause_id,
-    anxiety_cause_id),
-  c(2.12,# Lower estimates of PAR
-    2.54,
-    1.71,
-    2,
-    1.43))
-colnames(relative_risk) <- c("cause_id", "rel_risk")
-
-data_prev <- inner_join(data_prev, relative_risk, by = "cause_id")
-data_prev$par <-     data_prev$lower  * ((data_prev$rel_risk - 1) /    data_prev$rel_risk)
-data_prev_allmentaldisorders <- data_prev %>% filter(cause_id == mental_disorder_cause_id) %>% select(c(location_id,par))
-
-data_rev <- full_join(data_rev, data_prev_allmentaldisorders, by = "location_id")
-
-data_rev$"Revised - Walker et al. method" = data_rev$par * data_rev$measure_total
-
-rm(relative_risk, data_prev_allmentaldisorders)
-data_rev <- data_rev %>% relocate(par, .after = population)
-data_rev <- data_rev %>% rename("Original GBD method" = Original)
-
-data_rev$composite_ylds <-ifelse(data_rev$measure_id == 3, data_rev$"Revised - Vigo et al. method", 0)
-data_rev$composite_ylls <-ifelse(data_rev$measure_id == 4, data_rev$"Revised - Walker et al. method", 0)
-
-data_rev_composite <- data_rev %>% select(location_id, measure_id, composite_ylds, composite_ylls) %>%
-  group_by(location_id) %>%
-  mutate(composite_dalys = sum(composite_ylds, composite_ylls))
-
-data_rev_composite <- data_rev_composite %>% filter(measure_id == 2) %>% ungroup() %>% unique() %>% select(c(1,5))
-data_rev <- inner_join(data_rev, data_rev_composite, by = "location_id")
-data_rev$composite_dalys[data_rev$measure_id != 2] <- 0
-
-data_rev$composite_deaths <-ifelse(data_rev$measure_id == 1, data_rev$"Revised - Walker et al. method", 0)
-
-data_rev$composite <- data_rev$composite_ylds + data_rev$composite_ylls + data_rev$composite_dalys + data_rev$composite_deaths
-data_rev <- data_rev %>% select(!c(14:17))
-data_rev <- data_rev %>% rename("Revised - Composite method" = composite)
-data_rev <- data_rev %>% relocate(12, .after = par)
-data_rev$cause_name <- "Mental disorders"
-data_rev <- data_rev %>% gather("estimate", "number", 11:14)
-
-data_rev$estimate_id <- ifelse(data_rev$estimate == "Revised - Composite method", 4, 
-                               ifelse(data_rev$estimate == "Revised - Walker et al. method", 3,
-                                      ifelse(data_rev$estimate == "Revised - Vigo et al. method", 2, 1)))
-data_rev <- data_rev %>% relocate(estimate_id, .after = estimate)
-
-data_rev$population_100k <- data_rev$population
-data_rev$population <- data_rev$population_100k  * 100000
-data_rev <- data_rev %>% relocate (population_100k, .after = population)
-data_rev$rate_per_100k <- data_rev$number/data_rev$population_100k
-data_rev$percent <- data_rev$number/data_rev$measure_total*100
-
-gdp <- read.csv(file = file.path(datapath,"wdi_gdp.csv")) %>%
-  select(-(c(3:62))) %>% 
-  rename("gdp" = "X2019")
-gdp <- gdp %>% select(c(iso_code, gdp))
-data_rev <- left_join(data_rev, gdp, by = "iso_code")
-data_rev <- data_rev %>% relocate(gdp, .after = iso_code)
-data_rev$gdp[data_rev$location_id == 1] <- 87798525859220.9          # Source: World Bank, WDI
-
-data_rev$gdp_per_capita <- data_rev$gdp/data_rev$population
-data_rev <- data_rev %>% relocate (gdp_per_capita, .after = gdp)
-rm(gdp)
+ggsave(filename = "fig15_ihme_region.png", plot = last_plot(), 
+       path = resultspath,
+       width = 13,
+       height = 8)
 
 ############################
-# Cost per DALY
-
-data_rev$cost_cc1 <- ifelse(data_rev$measure_id == 2,
-                            data_rev$number * 1000, 0)
-data_rev$cost_cc2 <- data_rev$cost_cc1 * 5
-data_rev$cost_who1 <-ifelse(data_rev$measure_id == 2,
-                            data_rev$number * data_rev$gdp_per_capita, 0)
-data_rev$cost_who2 <- data_rev$cost_who1 * 3
-
-data_global <- data_rev %>% filter(location_id == 1) %>% filter(measure_id == 2)
-
+##        TABLES          ##
+############################
 
 # Table 1: Burden of disease due to mental disorders
 
-# Global
-data_global <- data_rev %>% filter(location_id == 1)
-table1 <- data_global  %>% select(measure_id, estimate, number, percent)
-table1$percent <- round(table1$percent, 2)
-table1$number <- round(table1$number/1000000,3)
+data_global <- data_rev %>% filter(location_id == 1)  %>% filter(estimate_id != 3)  %>% select(location_name, measure_name, numeric_name, estimate, number, percent) %>%
+  mutate(number = round(number/1000000, 1),
+         percent = round(percent, 1))
 
-write.csv(table1, file = "results/table1_global_lower.csv")
+data_regional <- data_rev  %>% filter(estimate_id != 3)  %>% 
+  group_by(who_region,measure_name, numeric_name, estimate) %>% mutate(region_total = sum(measure_total),
+                                                                       region_number = sum(number)) %>%
+  mutate(region_percent = round(region_number / region_total * 100, 1)) %>% select(who_region, measure_name, numeric_name, estimate, region_number, region_percent) %>%
+  rename("number" = "region_number",
+         "percent" = "region_percent",
+         "location_name" = "who_region") %>%
+  ungroup() %>%
+  unique() %>% filter(!is.na(location_name)) %>%
+  mutate(number = round(number/1000000, 1)) %>% arrange((location_name))
 
-# Regional
-table1 <- data_rev %>% filter(estimate_id != 3) %>% 
-  filter(location_id != 1)%>% 
-  select(measure_id, iso_code, measure_total, estimate, number)
+data_income <- data_rev  %>% filter(estimate_id != 3)  %>% 
+  group_by(income_level,measure_name, numeric_name, estimate) %>% mutate(region_total = sum(measure_total),
+                                                                         region_number = sum(number)) %>%
+  mutate(region_percent = round(region_number / region_total * 100, 1)) %>% select(income_level, measure_name, numeric_name, estimate, region_number, region_percent) %>%
+  rename("number" = "region_number",
+         "percent" = "region_percent",
+         "location_name" = "income_level") %>%
+  ungroup() %>%
+  unique() %>% filter(!is.na(location_name)) %>%
+  mutate(number = round(number/1000000, 1))
+
+location_name <- c("H","UM","LM","L")
+rank <- c(1,2,3,4)
+fullname <- c("High income",
+              "Upper-middle income",
+              "Lower-middle income",
+              "Low income")
 
 
-# Adding regions
-region <- read_excel(path = file.path(datapath, "regions.xlsx"))
-table1 <- left_join(table1, region, by = "iso_code")
+incomelevels <- data.frame(location_name,rank, fullname)
 
-table1 <- table1 %>% group_by(who_region, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
-                                                                       region_dalymh = sum(number))
+data_income <- left_join(data_income, incomelevels, by = "location_name") %>% arrange(rank) %>% select(!c(location_name, rank)) %>% rename("location_name" = "fullname")
 
-table1$percent <- round(table1$region_dalymh/table1$region_dalytotal*100, 2)
-table1 <- table1 %>% ungroup() %>% select(measure_id, who_region, estimate, region_dalymh, percent) %>% unique()
-table1$region_dalymh <- round(table1$region_dalymh/1000000,3)
+data_table1 <- rbind(data_global, data_income, data_regional) %>% 
+  gather("metric","point","number":"percent" ) %>%  
+  pivot_wider(names_from = c(numeric_name, metric, estimate), values_from = point)
 
-write.csv(table1, file = "results/table1_region_lower.csv")
+rm(data_global, data_regional, data_income, incomelevels, location_name, rank, fullname)
 
-# Income level
+col_order <- c(
+  "measure_name",
+  "location_name",                                    
+  "val_number_GBD 2019",                             
+  "lower_number_GBD 2019",                            
+  "upper_number_GBD 2019",   
+  "val_percent_GBD 2019",                            
+  "lower_percent_GBD 2019",  
+  "upper_percent_GBD 2019",                           
+  "val_number_Revised - 2016 reallocation method",   
+  "lower_number_Revised - 2016 reallocation method",  
+  "upper_number_Revised - 2016 reallocation method",  
+  "val_percent_Revised - 2016 reallocation method",  
+  "lower_percent_Revised - 2016 reallocation method", 
+  "upper_percent_Revised - 2016 reallocation method", 
+  "val_number_Revised - Composite method",           
+  "lower_number_Revised - Composite method",          
+  "upper_number_Revised - Composite method",          
+  "val_percent_Revised - Composite method",          
+  "lower_percent_Revised - Composite method",  
+  "upper_percent_Revised - Composite method")
 
-table1 <- data_rev %>% filter(estimate_id != 3) %>% 
-  filter(location_id != 1)%>% 
-  select(income_level, measure_id, measure_total, estimate, number)
+data_table1 <- data_table1[, col_order]
+rm(col_order)
 
-table1 <- table1 %>% group_by(measure_id, income_level, estimate) %>% mutate(income_level_dalytotal = sum(measure_total),
-                                                                             income_level_dalymh = sum(number))
+data_table1 <- data_table1 %>% arrange(measure_name)
 
-table1$percent <- round(table1$income_level_dalymh/table1$income_level_dalytotal*100, 2)
-table1 <- table1 %>% ungroup() %>% select(income_level, measure_id, estimate, income_level_dalymh, percent) %>% unique() 
+write.csv(data_table1, file = "results/table1.csv")
 
-table1$income_level_dalymh <- round(table1$income_level_dalymh/1000000,3)
-
-write.csv(table1, file = "results/table1_income_lower.csv")
-
-rm(table1, region)
+rm(data_table1)
 
 # Table 2: Value of economic welfare estimates 
 
-table2 <- data_global %>% filter(estimate_id != 3) %>% select(estimate, cost_cc1, cost_cc2, cost_who1, cost_who2)
+table2 <- data_rev %>% filter(location_id == 1) %>%  filter(measure_id == 2) %>% filter(estimate_id != 3) %>% select(estimate, numeric_name, cost_cc1, cost_cc2, cost_who1, cost_who2)
 table2$cost_cc1 <- round(table2$cost_cc1/1000000000000,2)
 table2$cost_cc2 <- round(table2$cost_cc2/1000000000000,2)
 table2$cost_who1 <- round(table2$cost_who1/1000000000000,2)
 table2$cost_who2 <- round(table2$cost_who2/1000000000000,2)
+table2 <- table2 %>% select(!c(cost_cc1, cost_cc2)) %>% arrange(estimate, factor(numeric_name, levels = c("val", "lower", "upper")))
 table2_t <- transpose(table2)
 
 colnames(table2_t) <- rownames(table2)
 rownames(table2_t) <- colnames(table2)
 
-write.csv(table2_t, file = "results/table2_lower.csv")
+write.csv(table2_t, file = "results/table2.csv")
 rm(table2, table2_t)
 
-#################
-# Upper bounds
 
 
-data <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-1.csv"))
-ihme_crosswalk <- read_excel(path = file.path(datapath, "ihme_crosswalk.xlsx")) %>% 
-  select(-c("location_name"))
-
-data <- left_join(data, ihme_crosswalk, by = "location_id")
-rm(ihme_crosswalk) 
-
-income_level <- read_excel(path = file.path(datapath, "OGHIST.xls"), sheet = 2) %>% 
-  select(-(c(2:34))) %>% 
-  rename("income_level" = "2019")
-data <- left_join(data, income_level, by = "iso_code")
-
-rm(income_level) 
-data <- data %>% unique() %>% gather("numeric_name", "est", "val":"lower") 
-data_number <- data %>% filter(metric_id == 1) %>% rename("number" = "est")
-data_rate <- data %>% filter(metric_id == 3) 
-data_rate <- data %>% select("measure_id","location_id", "sex_id", "age_id", "cause_id", "year", "numeric_name", "est") %>% rename("rate" = "est")
-data <- left_join(data_number, data_rate, by = c("measure_id","location_id", "sex_id", "age_id", "cause_id", "year", "numeric_name"))
-rm(data_number, data_rate)
-
-data <- data %>% unique() %>% filter(numeric_name == "upper") %>% spread(numeric_name, number)
-data <- data %>% rename("val" = "upper")
-data$population <- data$val/data$rate
-data <- data %>% filter(population != 1) %>% unique()
-
-mental_disorder_cause_id <- 558
-dementia_cause_id <- c(543, 544)
-epilepsy_cause_id <- 545
-migraine_cause_id <- 547
-tension_type_headache_cause_id <- 548
-self_harm <- 718
-musculoskeletal_cause_id <- 626
-all_cause_id <- 294
-
-# Causes to fully include under mental disorders
-revision_full <- c(mental_disorder_cause_id,
-                   dementia_cause_id,
-                   epilepsy_cause_id,
-                   migraine_cause_id,
-                   tension_type_headache_cause_id,
-                   self_harm)
-
-# Causes to include under mental disorders, 2/5th
-ms_id <- musculoskeletal_cause_id
-
-# Relevant causes to retain
-inclusion <- c(mental_disorder_cause_id,
-               dementia_cause_id,
-               epilepsy_cause_id,
-               migraine_cause_id,
-               tension_type_headache_cause_id,
-               self_harm,
-               musculoskeletal_cause_id,
-               all_cause_id)
-
-data_vigo <- data %>% filter(cause_id %in% inclusion)
-
-# Applying Vigo et al. re-allocations
-
-data_vigo$mh_gbd <- ifelse(data_vigo$cause_id == mental_disorder_cause_id, 1, 0)  # Fully retain existing mental disorders
-data_vigo$mh_vigo <- ifelse(data_vigo$cause_id %in% revision_full, 1, 0)          # Allocate 100% of these conditions
-data_vigo$mh_vigo[data_vigo$cause_id %in% ms_id] <- 2/5                  # Allocate 0% of these conditions
-data_vigo$all <- ifelse(data_vigo$cause_id == all_cause_id, 1, 0)                 # Binary in case of all_cause 
-data_vigo$value <- data_vigo$val * data_vigo$mh_gbd                               # Retain original IHME values
-data_vigo$value_rev <- data_vigo$val * data_vigo$mh_vigo                          # Apply allocation percents against original IHME values
-
-data_vigo <- data_vigo %>% 
-  group_by(location_id, measure_id, sex_id, age_id, metric_id) %>% 
-  mutate(mh_value_agg_rev = sum(value_rev), mh_value_agg = sum(value))
-
-data_rev <- data_vigo %>%
-  filter(cause_id == "294") %>% #Filters to all causes; data_gh$val == total burden by location id
-  filter(metric_id == "1") %>%  #Filters to numeric metric
-  rename("Revised - Vigo et al. method" = mh_value_agg_rev, "Original" = mh_value_agg, "measure_total" = val) %>%
-  filter(measure_id %in% 1:4) %>% #Retains only deaths, DALYS, YLDs, and YLLs
-  ungroup %>%
-  select(c(1:4, 13:15, 17:18,24:25))
-
-data_prev <- read.csv(file = file.path(datapath,"IHME-GBD_2019_DATA-2019-prev.csv"))
-
-mental_disorder_cause_id <- 558
-schizophrenia_cause_id <- 559
-depressive_cause_id <- 567
-bipolar_cause_id <- 570
-anxiety_cause_id <- 571 
-
-relative_risk <- data.frame(
-  c(mental_disorder_cause_id,
-    schizophrenia_cause_id,
-    depressive_cause_id,
-    bipolar_cause_id,
-    anxiety_cause_id),
-  c(2.33, #Upper bounds of pooled RRs
-    2.54,
-    1.71,
-    2,
-    1.43))
-colnames(relative_risk) <- c("cause_id", "rel_risk")
-
-data_prev <- inner_join(data_prev, relative_risk, by = "cause_id")
-
-data_prev$par <-     data_prev$upper  * ((data_prev$rel_risk - 1) /    data_prev$rel_risk)
-
-data_prev_allmentaldisorders <- data_prev %>% filter(cause_id == mental_disorder_cause_id) %>% select(c(location_id,par))
-
-data_rev <- full_join(data_rev, data_prev_allmentaldisorders, by = "location_id")
-
-data_rev$"Revised - Walker et al. method" = data_rev$par * data_rev$measure_total
-
-rm(relative_risk, data_prev_allmentaldisorders)
-data_rev <- data_rev %>% relocate(par, .after = population)
-data_rev <- data_rev %>% rename("Original GBD method" = Original)
 
 
-data_rev$composite_ylds <-ifelse(data_rev$measure_id == 3, data_rev$"Revised - Vigo et al. method", 0)
-data_rev$composite_ylls <-ifelse(data_rev$measure_id == 4, data_rev$"Revised - Walker et al. method", 0)
-data_rev_composite <- data_rev %>% select(location_id, measure_id, composite_ylds, composite_ylls) %>%
-  group_by(location_id) %>%
-  mutate(composite_dalys = sum(composite_ylds, composite_ylls))
-
-data_rev_composite <- data_rev_composite %>% filter(measure_id == 2) %>% ungroup() %>% unique() %>% select(c(1,5))
-data_rev <- inner_join(data_rev, data_rev_composite, by = "location_id")
-data_rev$composite_dalys[data_rev$measure_id != 2] <- 0
-data_rev$composite_deaths <-ifelse(data_rev$measure_id == 1, data_rev$"Revised - Walker et al. method", 0)
-data_rev$composite <- data_rev$composite_ylds + data_rev$composite_ylls + data_rev$composite_dalys + data_rev$composite_deaths
-data_rev <- data_rev %>% select(!c(14:17))
-data_rev <- data_rev %>% rename("Revised - Composite method" = composite)
-data_rev <- data_rev %>% relocate(12, .after = par)
-data_rev$cause_name <- "Mental disorders"
-data_rev <- data_rev %>% gather("estimate", "number", 11:14)
-rm(data_vigo, data_vigo_global, anxiety_cause_id, bipolar_cause_id, depressive_cause_id, inclusion, mental_disorder_cause_id, schizophrenia_cause_id, data_rev_composite)
-data_rev$estimate_id <- ifelse(data_rev$estimate == "Revised - Composite method", 4, 
-                               ifelse(data_rev$estimate == "Revised - Walker et al. method", 3,
-                                      ifelse(data_rev$estimate == "Revised - Vigo et al. method", 2, 1)))
-data_rev <- data_rev %>% relocate(estimate_id, .after = estimate)
-
-data_rev$population_100k <- data_rev$population
-data_rev$population <- data_rev$population_100k  * 100000
-data_rev <- data_rev %>% relocate (population_100k, .after = population)
-data_rev$rate_per_100k <- data_rev$number/data_rev$population_100k
-data_rev$percent <- data_rev$number/data_rev$measure_total*100
-
-gdp <- read.csv(file = file.path(datapath,"wdi_gdp.csv")) %>%
-  select(-(c(3:62))) %>% 
-  rename("gdp" = "X2019")
-gdp <- gdp %>% select(c(iso_code, gdp))
-data_rev <- left_join(data_rev, gdp, by = "iso_code")
-data_rev <- data_rev %>% relocate(gdp, .after = iso_code)
-data_rev$gdp[data_rev$location_id == 1] <- 87798525859220.9        
-
-data_rev$gdp_per_capita <- data_rev$gdp/data_rev$population
-data_rev <- data_rev %>% relocate (gdp_per_capita, .after = gdp)
-
-rm(gdp)
-
-data_rev$cost_cc1 <- ifelse(data_rev$measure_id == 2,
-                            data_rev$number * 1000, 0)
-data_rev$cost_cc2 <- data_rev$cost_cc1 * 5
-data_rev$cost_who1 <-ifelse(data_rev$measure_id == 2,
-                            data_rev$number * data_rev$gdp_per_capita, 0)
-data_rev$cost_who2 <- data_rev$cost_who1 * 3
-data_global <- data_rev %>% filter(location_id == 1) %>% filter(measure_id == 2)
 
 
-# Table 1: Burden of disease due to mental disorders
-
-# Global
-data_global <- data_rev %>% filter(location_id == 1)
-table1 <- data_global  %>% select(measure_id, estimate, number, percent)
-table1$percent <- round(table1$percent, 2)
-table1$number <- round(table1$number/1000000,3)
-
-write.csv(table1, file = "results/table1_global_upper.csv")
-
-# Regional
-table1 <- data_rev %>% filter(estimate_id != 3) %>% 
-  filter(location_id != 1)%>% 
-  select(measure_id, iso_code, measure_total, estimate, number)
 
 
-# Adding regions
-region <- read_excel(path = file.path(datapath, "regions.xlsx"))
-table1 <- left_join(table1, region, by = "iso_code")
 
-table1 <- table1 %>% group_by(who_region, estimate, measure_id) %>% mutate(region_dalytotal = sum(measure_total),
-                                                                       region_dalymh = sum(number))
+## To do
+# Run SA
+# Drop datasources and references to names (first line, directories)
 
-table1$percent <- round(table1$region_dalymh/table1$region_dalytotal*100, 2)
-table1 <- table1 %>% ungroup() %>% select(measure_id, who_region, estimate, region_dalymh, percent) %>% unique()
-table1$region_dalymh <- round(table1$region_dalymh/1000000,3)
 
-write.csv(table1, file = "results/table1_region_upper.csv")
+########### Sensitivity Analysis ######################
 
-# Income level
 
-table1 <- data_rev %>% filter(estimate_id != 3) %>% 
-  filter(location_id != 1)%>% 
-  select(income_level, measure_id, measure_total, estimate, number)
 
-table1 <- table1 %>% group_by(measure_id, income_level, estimate) %>% mutate(income_level_dalytotal = sum(measure_total),
-                                                                             income_level_dalymh = sum(number))
 
-table1$percent <- round(table1$income_level_dalymh/table1$income_level_dalytotal*100, 2)
-table1 <- table1 %>% ungroup() %>% select(income_level, measure_id, estimate, income_level_dalymh, percent) %>% unique() 
 
-table1$income_level_dalymh <- round(table1$income_level_dalymh/1000000,3)
+set.seed(82420212)
+prev.sample <- rnorm(n = 1000, mean = .1304, sd = ((.1402 - .1212) / 3.92))
+rr.sample <- rnorm (n = 1000,  mean = 2.22, sd = ((2.33 - 2.12) / 3.92))
+deaths.sample <- rnorm (n = 1000,  mean = 56526959.51, sd = ((59205883 - 53742682.45) / 3.92))
+psa_data <- cbind.data.frame(rr.sample, prev.sample, deaths.sample)
+psa_data$Cases <- ((psa_data$prev.sample  * ((psa_data$rr.sample - 1)))) /  ((psa_data$rr.sample))
+psa_data$TotalPop <- ((psa_data$prev.sample  * ((psa_data$rr.sample - 1)))) /  (((psa_data$prev.sample  * ((psa_data$rr.sample - 1))))+1)
 
-write.csv(table1, file = "results/table1_income_upper.csv")
+psa_data <- psa_data %>% pivot_longer(cols = c(TotalPop, Cases), values_to = "paf")
+psa_data$deaths_mh <- psa_data$deaths.sample * psa_data$paf
 
-rm(table1, region)
+psa_data %>% ggplot(aes(x = prev.sample*100, y = deaths_mh/1000000, alpha = rr.sample, color = name)) +
+  geom_point() + 
+  labs(x = "Prevalence of mental disorders, %",  
+       y = "Global # of deaths attributable to mental disorders, millions",
+       color = "Prevalence assumed to be for",
+       caption = "Cases: p(RR -1)/ RR. TotalPop: [p(RR - 1)] / [(p(RR -1) + 1].",
+       alpha = "Relative risk") + 
+  theme_pubr()
+
+psa_data %>% ggplot(aes(x = rr.sample, y = deaths_mh/1000000, alpha = prev.sample, color = name)) +
+  geom_point() + 
+  labs(alpha = "Prevalence of mental disorders, %",  
+       y = "Global # of deaths attributable to mental disorders, millions",
+       color = "Prevalence assumed to be for",
+       caption = "Cases: p(RR -1)/ RR. TotalPop: [p(RR - 1)] / [(p(RR -1) + 1].",
+       x = "Relative risk") + 
+  theme_pubr()
+
+
+
+set.seed(82420212)
+prev.sample <- runif(n = 1000, min = 0.01, max = 0.2)
+a <- c(.5, 1, 1.5, 2, 2.5, 3)
+rr.sample <- sample(a,  size=1000, replace=T)
+deaths.sample <- rnorm (n = 1000,  mean = 56526959.51, sd = ((59205883 - 53742682.45) / 3.92))
+psa_data <- cbind.data.frame(rr.sample, prev.sample, deaths.sample)
+psa_data$Cases <- ((psa_data$prev.sample  * ((psa_data$rr.sample - 1)))) /  ((psa_data$rr.sample))
+psa_data$TotalPop <- ((psa_data$prev.sample  * ((psa_data$rr.sample - 1)))) /  (((psa_data$prev.sample  * ((psa_data$rr.sample - 1))))+1)
+
+psa_data <- psa_data %>% pivot_longer(cols = c(TotalPop, Cases), values_to = "paf")
+psa_data$deaths_mh <- psa_data$deaths.sample * psa_data$paf
+
+psa_data %>% ggplot(aes(x = prev.sample*100, y = deaths_mh/1000000, color = name)) +
+  geom_point() + 
+  labs(x = "Prevalence of mental disorders, %",  
+       y = "Global # of deaths attributable to mental disorders, millions",
+       color = "Prevalence of risk factor w.r.t",
+       caption = "Cases: p(RR -1)/ RR. TotalPop: [p(RR - 1)] / [(p(RR -1) + 1].")+ 
+  theme_pubr() +
+  facet_wrap(~rr.sample)
+
+
+set.seed(82420212)
+prev.sample <- rnorm(n = 1000, mean = .1304, sd = ((.1402 - .1212) / 3.92))
+a <- c(.5, 1, 1.5, 2, 2.5, 3)
+rr.sample <- runif(n = 1000, min = 2.2-.5, max = 2.7)
+deaths.sample <- rnorm (n = 1000,  mean = 56526959.51, sd = ((59205883 - 53742682.45) / 3.92))
+psa_data <- cbind.data.frame(rr.sample, prev.sample, deaths.sample)
+psa_data$Cases <- ((psa_data$prev.sample  * ((psa_data$rr.sample - 1)))) /  ((psa_data$rr.sample))
+psa_data$TotalPop <- ((psa_data$prev.sample  * ((psa_data$rr.sample - 1)))) /  (((psa_data$prev.sample  * ((psa_data$rr.sample - 1))))+1)
+
+psa_data <- psa_data %>% pivot_longer(cols = c(TotalPop, Cases), values_to = "paf")
+psa_data$deaths_mh <- psa_data$deaths.sample * psa_data$paf
+
+psa_data %>% ggplot(aes(x = rr.sample, y = deaths_mh/1000000)) +
+  geom_rect(aes(xmin=2.12, xmax=2.33, ymin = -Inf, ymax= Inf), fill = "grey90") +
+  geom_point(aes(alpha = prev.sample, color = name)) + 
+  geom_vline(xintercept = 2.22) +
+  labs(alpha = "Prevalence of mental disorders, %",  
+       y = "Global # of deaths attributable to mental disorders, millions",
+       color = "Prevalence of risk factor w.r.t",
+       x = "Relative risk",
+       caption = "Cases: p(RR -1)/ RR. TotalPop: [p(RR - 1)] / [(p(RR -1) + 1]. Vertical line = pooled RR from Walker et. al (2.2), grey shaded region represents 95% CI.")+ 
+  lims(y = c(0,max(psa_data$deaths_mh/1000000)))
+
+
+### Walker et al sensitivity analysis
+set.seed(82420212)
+prev.sample <- rnorm(n = 1000, mean = .261, sd = .01)
+rr.sample <- runif(n = 1000, min = 2.22-.5, max = 2.72)
+deaths.sample <- rnorm (n = 1000,  mean = 56526959.51, sd = ((59205883 - 53742682.45) / 3.92))
+psa_data <- cbind.data.frame(rr.sample, prev.sample, deaths.sample)
+psa_data$Cases <- ((psa_data$prev.sample  * ((psa_data$rr.sample - 1)))) /  ((psa_data$rr.sample))
+psa_data$TotalPop <- ((psa_data$prev.sample  * ((psa_data$rr.sample - 1)))) /  (((psa_data$prev.sample  * ((psa_data$rr.sample - 1))))+1)
+
+psa_data <- psa_data %>% pivot_longer(cols = c(TotalPop, Cases), values_to = "paf")
+psa_data$deaths_mh <- psa_data$deaths.sample * psa_data$paf
+
+psa_data %>% ggplot(aes(x = rr.sample, y = deaths_mh/1000000)) +
+  geom_rect(aes(xmin=2.12, xmax=2.33, ymin = -Inf, ymax= Inf), fill = "grey90") +
+  geom_point(aes(alpha = prev.sample*100, color = name)) + 
+  geom_vline(xintercept = 2.22) +
+  labs(alpha = "Prevalence of mental disorders, %",  
+       y = "Global # of deaths attributable to mental disorders, millions",
+       color = "Prevalence of risk factor w.r.t",
+       x = "Relative risk",
+       caption = "Cases: p(RR -1)/ RR. TotalPop: [p(RR - 1)] / [(p(RR -1) + 1]. Vertical line = pooled RR from Walker et. al (2.22), grey shaded region represents 95% CI.")+ 
+  theme_pubr() +
+  lims(y = c(0,max(psa_data$deaths_mh/1000000)))
