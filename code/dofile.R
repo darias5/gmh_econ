@@ -771,12 +771,14 @@ for(j in measures){
   n <- n + 1
 }
 
+data_rev$
+
 n = 11
 
 for (l in monetaryvalue) {
   for (m in comparison) {
     for (i in mapping) {
-      
+    
       data_rev %>% 
         filter(numeric_name == "val") %>%
         {if(i == "who_region") select(.,measure_id,estimate, estimate_id, who_region, who_region_pop100k:who_region_cost_who2_diff)
@@ -785,9 +787,8 @@ for (l in monetaryvalue) {
         filter(estimate_id %in%  c(ifelse(m =="diff","",1), 2,4)) %>% 
         filter(!is.na(get(i))) %>%
         mutate(region = factor(get(i) , levels =  get(paste0(i,"_positions")))) %>%
-        ggplot(aes(x = region, fill=region, y=get(paste0(i,"_percent",ifelse(m =="diff", "_diff",""))))) +
+        ggplot(aes(x = region, fill=region, y=get(paste0(i,"_",l,ifelse(m =="diff", "_diff","")))/ get(paste0(i,"_","gdp")) * 100)) +
         geom_bar(stat="identity") +
-        
         labs(title=ifelse(m =="diff", "Difference in value of DALYs due to mental disorders in current USD, percentage points of GDP, relative to GBD 2019", 
                           "Value of DALYs due to mental disorders in current USD, % of GDP"),
              subtitle=get(paste0("subtitle_",(n-4-6))),
@@ -799,7 +800,7 @@ for (l in monetaryvalue) {
               axis.title = element_blank(), 
               axis.text.x = element_blank(),
               axis.ticks.x = element_blank())  + 
-        geom_text(aes(label=round(get(paste0(i,"_percent",ifelse(m =="diff", "_diff",""))),1)), vjust=1.6, color="black", size=ifelse(i =="who_region",2.5, 1.5)) +
+        geom_text(aes(label=round(get(paste0(i,"_",l,ifelse(m =="diff", "_diff","")))/ get(paste0(i,"_","gdp")) * 100,1)), vjust=1.6, color="black", size=ifelse(i =="who_region",2.5, 1.5)) +
         scale_fill_manual(name = "Region", values = get(paste0(i,"_pal")))
       
       ggsave(filename = paste0("fig", n,"_",i,"_",m,".png"), plot = last_plot(), 
@@ -948,8 +949,6 @@ data_table1 <- data_table1 %>% arrange(measure_name)
 
 write.csv(data_table1, file = "results/table1.csv")
 
-rm(data_table1)
-
 # Table 2: Value of economic welfare estimates 
 
 table2 <- data_rev %>% filter(location_id == 1) %>%  filter(measure_id == 2) %>% filter(estimate_id != 3) %>% select(estimate, numeric_name, cost_cc1, cost_cc2, cost_who1, cost_who2)
@@ -964,10 +963,110 @@ colnames(table2_t) <- rownames(table2)
 rownames(table2_t) <- colnames(table2)
 
 write.csv(table2_t, file = "results/table2.csv")
+
+# Appendix 2: Value of economic welfare estimates (CC)
+
+appendix_table <- data_rev %>% filter(location_id == 1) %>%  filter(measure_id == 2) %>% filter(estimate_id != 3) %>% select(estimate, numeric_name, cost_cc1, cost_cc2, cost_who1, cost_who2)
+appendix_table$cost_cc1 <- round(appendix_table$cost_cc1/1000000000000,2)
+appendix_table$cost_cc2 <- round(appendix_table$cost_cc2/1000000000000,2)
+appendix_table$cost_who1 <- round(appendix_table$cost_who1/1000000000000,2)
+appendix_table$cost_who2 <- round(appendix_table$cost_who2/1000000000000,2)
+appendix_table <- appendix_table %>% select(!c(cost_who1, cost_who2)) %>% arrange(estimate, factor(numeric_name, levels = c("val", "lower", "upper")))
+appendix_table_t <- transpose(appendix_table)
+
+colnames(appendix_table_t) <- rownames(appendix_table)
+rownames(appendix_table_t) <- colnames(appendix_table)
+
+write.csv(appendix_table_t, file = "results/table_appendix.csv")
+
+############################
+##        VALUES          ##
+############################
+
+# Key values and calulcations for Abstract and Results
+
+# Abstract
+
+abstract1 <- data_table1 %>% 
+  filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
+  filter(location_name =="Global") %>% 
+  select("val_number_Revised - Composite method") %>% 
+  unique()
+abstract1 <- as.numeric(abstract1)
+abstract1 <- round(abstract1, 0)
+
+abstract2 <- data_table1 %>% 
+  filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
+  filter(location_name =="Global") %>% 
+  select("val_percent_Revised - Composite method") %>% 
+  unique()
+abstract2 <- as.numeric(abstract2)
+abstract2 <- round(abstract2, 0)
+
+abstract3 <- data_table1 %>% 
+  filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
+  filter(location_name =="Global") %>% 
+  select("val_number_GBD 2019") %>% 
+  unique()
+abstract3 <- as.numeric(abstract3)
+abstract3 <- round(abstract3, 0)
+
+abstract_sentence1 <- paste0("Using an estimation approach that accounts for premature mortality due to mental disorders and additional sources of morbidity, we estimate that ",
+       abstract1,
+       " million disability-adjusted life years (DALYs) were attributable to mental disorders in 2019 (",
+       abstract2,
+       "% of global DALYs)—a",
+       ifelse(abstract1/abstract3>3," more than ","n approximate "), 
+       "three-fold increase compared to conventional estimates.")
+
+abstract4 <- table2 %>% 
+  filter(estimate=="Revised - Composite method") %>% 
+  filter(numeric_name =="val") %>% 
+  select("cost_who1") %>% 
+  unique()
+abstract4 <- as.numeric(abstract4)
+abstract4 <- floor(abstract4*10)/10
+
+abstract_sentence2 <- paste0("The economic value associated with this burden is estimated to exceed USD ",
+       abstract4,
+       " trillion. ")
+
+table3 <- data_rev %>% 
+  filter(numeric_name == "val") %>%
+  select(measure_id, estimate, estimate_id, ihme_region, ihme_region_cost_who1, ihme_region_gdp) %>% 
+  unique %>%
+  filter(measure_id== "2") %>% 
+  filter(estimate_id== "4") %>% mutate(
+    regional_percent = ihme_region_cost_who1 / ihme_region_gdp *100)
+
+abstract5 <- table3$ihme_region[table3$regional_percent == max(table3$regional_percent)]
+abstract6 <- round(table3$regional_percent[table3$regional_percent == max(table3$regional_percent)],1)
+
+abstract7 <- table3$ihme_region[table3$regional_percent == min(table3$regional_percent)]
+abstract8 <- round(table3$regional_percent[table3$regional_percent == min(table3$regional_percent)],1)
+
+abstract_sentence3 <- paste0("At a regional level, the losses account for between ",
+       abstract8,
+       "% of gross domestic product in ",
+       abstract7,
+       " and ",
+       abstract6,
+       "% in ",
+       abstract5,
+       ".")
+
+paste(abstract_sentence1,abstract_sentence2, abstract_sentence3)
+         
+rm(abstract1, abstract2, abstract3, abstract4)
+rm(abstract_sentence1,abstract_sentence2, abstract_sentence3)
+rm(data_table1)
 rm(table2, table2_t)
+rm(table3)
+rm(appendix_table, appendix_table_t)
 
-
-########### Sensitivity Analysis ######################
+#########################################
+##        SENSITIVTY ANALYSIS          ##
+#########################################
 
 set.seed(82420212)
 prev.sample <- rnorm(n = 1000, mean = .1304, sd = ((.1402 - .1212) / 3.92))
