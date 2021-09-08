@@ -1001,7 +1001,7 @@ abstract2 <- data_table1 %>%
   select("val_percent_Revised - Composite method") %>% 
   unique()
 abstract2 <- as.numeric(abstract2)
-abstract2 <- round(abstract2, 0)
+abstract2 <- floor(abstract2)
 
 abstract3 <- data_table1 %>% 
   filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
@@ -1055,14 +1055,164 @@ abstract_sentence3 <- paste0("At a regional level, the losses account for betwee
        abstract5,
        ".")
 
-paste(abstract_sentence1,abstract_sentence2, abstract_sentence3)
-         
-rm(abstract1, abstract2, abstract3, abstract4)
-rm(abstract_sentence1,abstract_sentence2, abstract_sentence3)
-rm(data_table1)
-rm(table2, table2_t)
-rm(table3)
-rm(appendix_table, appendix_table_t)
+# Results
+
+results1 <- data_table1 %>% 
+  filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
+  filter(location_name =="Global") %>% 
+  select("val_number_GBD 2019") %>% 
+  unique()
+results1 <- as.numeric(results1)
+results1 <- floor(results1)
+
+results2 <- data_table1 %>% 
+  filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
+  filter(location_name =="Global") %>% 
+  select("val_percent_GBD 2019") %>% 
+  unique()
+results2 <- as.numeric(results2)
+results2 <- round(results2,0)
+
+results3 <- data_table1 %>% 
+  filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
+  filter(location_name =="Global") %>% 
+  select("val_percent_Revised - 2016 reallocation method") %>% 
+  unique()
+results3 <- as.numeric(results3)
+results3 <- floor(results3)
+
+results4 <- data_table1 %>% 
+  filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
+  filter(location_name =="Global") %>% 
+  select("val_number_Revised - 2016 reallocation method") %>% 
+  unique()
+results4 <- as.numeric(results4)
+results4 <- floor(results4)
+
+results5 <- data_table1 %>% 
+  filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
+  filter(location_name =="High income") %>% 
+  select("val_number_Revised - Composite method") %>% 
+  unique()
+results5 <- as.numeric(results5)
+results5 <- round(results5, 0)
+
+results6 <- data_table1 %>% 
+  filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
+  filter(location_name =="Low income") %>% 
+  select("val_number_Revised - Composite method") %>% 
+  unique()
+results6 <- as.numeric(results6)
+results6 <- round(results6, 0)
+
+results_sentence1 <- paste0(
+"Under GBD 2019, over ",
+results1,
+" million DALYs were attributed to mental disorders, or roughly ",
+results2,
+"% of the global burden. After including neurological disorders, chronic pain, suicide, and self-harm, the share of morbidity and mortality due to mental disorders rose to ",
+results3,
+"% of global DALYs (approximately ",
+results4,
+" million DALYs). Under the composite approach to further capture premature mortality, an additional ",
+abstract1-results4,
+" million DALYs were attributed to mental disorders, encompassing, in total, over ",
+abstract2,
+"% of global DALYs. Under all three methods, the burden of mental disorders (in DALYs) exhibited a country-income gradient, with mental disorders comprising ",
+ifelse(results5/results6 > 2.4, "over twice", ifelse(results5/results6> 2, "roughly twice", "approximately twice")),
+" the burden of disease in high-income countries compared to low-income countries.")
+
+results7 <- table2 %>% 
+  filter(estimate=="Revised - Composite method") %>% 
+  filter(numeric_name =="val") %>% 
+  select("cost_who1") %>% 
+  unique()
+results7 <- as.numeric(results7)
+
+results8 <- table2 %>% 
+  filter(estimate=="Revised - 2016 reallocation method") %>% 
+  filter(numeric_name =="val") %>% 
+  select("cost_who1") %>% 
+  unique()
+results8 <- as.numeric(results8)
+
+results9 <- table2 %>% 
+  filter(estimate=="GBD 2019") %>% 
+  filter(numeric_name =="val") %>% 
+  select("cost_who1") %>% 
+  unique()
+results9 <- as.numeric(results9)
+
+results_sentence2 <- paste0(
+"Using GDP per capita as a proxy for the value per DALY, economic losses due to mental disorders were estimated at ",
+abstract4,
+" trillion USD using our composite approach. This estimate is ",
+floor((results7 - results8)*10)/10,
+" trillion USD larger than that reached using the 2016 reallocation approach and over ",
+floor((results7 - results9)*10)/10,
+" trillion USD larger than that reached from the unadjusted GBD 2019 estimates.")
+
+results_sentence3 <- paste0(
+"Using GDP per capita as the value per DALY, the losses due to mental disorders account for between ",
+abstract8,
+       "% of gross domestic product in ",
+       abstract7,
+       " and ",
+       abstract6,
+       "% in ",
+       abstract5,
+       " under our composite estimation approach.")
+
+# Discussion
+
+discussion_sentence1 <- paste0(
+"Ultimately, this approach suggests that the global DALYs attributable to mental disorders exceed ",
+abstract1,
+" million per year, or ",
+abstract2,
+"% of the total burden. If this estimate is taken to approximate the true burden of mental disorders, the current GBD classification would underestimate the burden by as many as ",
+abstract1-results1,
+" million DALYs, or ",
+round((abstract1-results1)/abstract1*100),
+"% of the current estimate.")
+
+
+discussion1 <- table2 %>% 
+  filter(estimate=="Revised - Composite method") %>% 
+  filter(numeric_name =="lower") %>% 
+  select("cost_who1") %>% 
+  unique()
+discussion1 <- as.numeric(discussion1)
+
+
+discussion2 <- table2 %>% 
+  filter(estimate=="Revised - Composite method") %>% 
+  filter(numeric_name =="upper") %>% 
+  select("cost_who1") %>% 
+  unique()
+discussion2 <- as.numeric(discussion2)
+
+discussion_sentence2 <- paste0(
+  "When applied against an economic value per DALY of one times GDP per capita, this approach further suggests that the per year losses associated with this burden exceeded ",
+abstract4,
+" trillion USD in 2019. This is over ",
+floor((abstract4 - 2.9)*10)/10,
+" trillion USD greater than Bloom et al.’s global welfare loss projection for 2030 (2.9 trillion USD, adjusted to 2019), using the same value per DALY approach. When adjusting for the wide uncertainty in estimates of the attributable burden of disease, the losses could range from ",
+floor((discussion1)*10)/10,
+" trillion to more than ",
+floor((discussion2)*10)/10,
+" trillion USD.")
+
+
+abstract_sentence1
+abstract_sentence2
+abstract_sentence3
+results_sentence1
+results_sentence2
+results_sentence3
+discussion_sentence1
+discussion_sentence2
+
 
 #########################################
 ##        SENSITIVTY ANALYSIS          ##
