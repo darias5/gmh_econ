@@ -275,13 +275,13 @@ data_rev$composite_deaths[data_rev$measure_id != 1] <- 0
 data_rev$composite <- data_rev$composite_ylds + data_rev$composite_ylls + data_rev$composite_dalys + data_rev$composite_deaths
 data_rev <- data_rev %>% select(!c("composite_ylds":"composite_deaths")) %>%  relocate(original_value_agg, .after = paf_formula) %>%
   relocate(numeric_name, .after = prevalence) %>%  
-  rename("Revised - Composite method" = composite,
-         "Revised - PAF method" = rev_2015_value_agg,
-         "Revised - 2016 reallocation method" = rev_2016_value_agg,
+  rename("Composite method" = composite,
+         "PAF method" = rev_2015_value_agg,
+         "2016 reallocation method" = rev_2016_value_agg,
          "GBD 2019" = original_value_agg)
 
 data_rev$cause_name <- "Mental disorders"
-data_rev <- data_rev %>% gather("estimate", "number", "GBD 2019":"Revised - Composite method")
+data_rev <- data_rev %>% gather("estimate", "number", "GBD 2019":"Composite method")
 
 # Clean up
 rm(data_rev_composite,
@@ -301,9 +301,9 @@ rm(data_rev_composite,
    original_weights,
    relative_risk)
 
-data_rev$estimate_id <- ifelse(data_rev$estimate == "Revised - Composite method", 4, 
-                               ifelse(data_rev$estimate == "Revised - PAF method", 3,
-                                      ifelse(data_rev$estimate == "Revised - 2016 reallocation method", 2, 1)))
+data_rev$estimate_id <- ifelse(data_rev$estimate == "Composite method", 4, 
+                               ifelse(data_rev$estimate == "PAF method", 3,
+                                      ifelse(data_rev$estimate == "2016 reallocation method", 2, 1)))
 data_rev <- data_rev %>% relocate(estimate_id, .after = estimate)
 
 # Calculate rates and percent of burden
@@ -492,18 +492,19 @@ world <- ne_countries(scale = "medium", returnclass = "sf")
 world$iso_code <- world$gu_a3
 world$iso_code[world$adm0_a3 == "SDS"] <- "SSD"
 
+# Re-order estimates: original, Vigo, Walker, composite
+
+data_rev$estimate <- factor(data_rev$estimate,      # Reordering group factor levels
+                                levels = c("GBD 2019",
+                                           "2016 reallocation method",
+                                           "PAF method",
+                                           "Composite method"))
 # Merging map and dataframe
 data_rev_map <- full_join(world, data_rev, by = "iso_code") %>% filter(numeric_name == "val")
 
 # Clean up
 rm(world, data_rev_gbd)
 
-# Re-order estimates: original, Vigo, Walker, composite
-data_rev_map$estimate <- factor(data_rev_map$estimate,      # Reordering group factor levels
-                                levels = c("GBD 2019",
-                                           "Revised - 2016 reallocation method",
-                                           "Revised - PAF method",
-                                           "Revised - Composite method"))
 
 # Standard subtitles, and captions
 subtitle_1 <- "Value per DALY: $1,000"
@@ -824,7 +825,7 @@ chart_4_gbdinputs_ihme_region_percent <-
   data_rev_ihme_inputs %>% 
   filter(!ihme_region %in% c("Global", "Other/Duplicates")) %>%
   filter(input != "inputs_all") %>%
-  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
+  mutate(ihme_region = factor(ihme_region, levels = ihme_region_positions)) %>%
   ggplot(aes(x = input, fill=ihme_region, y=count)) +
   geom_bar(position = "fill", stat="identity")+
   theme(panel.grid.major.y =  element_blank(), 
@@ -832,7 +833,7 @@ chart_4_gbdinputs_ihme_region_percent <-
         axis.title = element_blank(), 
         axis.ticks.x = element_blank()) +
   ggtitle("Share of cause-specific inputs") +
-  scale_fill_manual(name = "Region", values = ihme_pal) + 
+  scale_fill_manual(name = "Region", values = ihme_region_pal) + 
   scale_x_discrete(limit = c("inputs_mental", "inputs_maternal"),
                    labels = c(
                      
@@ -843,7 +844,7 @@ chart_4_gbdinputs_ihme_region_stacked <-
   data_rev_ihme_inputs %>% 
   filter(!ihme_region %in% c("Global", "Other/Duplicates")) %>%
   filter(input != "inputs_all") %>%
-  mutate(ihme_region = factor(ihme_region, levels = ihme_positions)) %>%
+  mutate(ihme_region = factor(ihme_region, levels = ihme_region_positions)) %>%
   ggplot(aes(x = input, fill=ihme_region, y=count)) +
   geom_bar(position = "stack", stat="identity")+
   theme(panel.grid.major.y =  element_blank(), 
@@ -851,7 +852,7 @@ chart_4_gbdinputs_ihme_region_stacked <-
         axis.title = element_blank(), 
         axis.ticks.x = element_blank()) +
   ggtitle("Number of cause-specific inputs") +
-  scale_fill_manual(name = "Region", values = ihme_pal) + 
+  scale_fill_manual(name = "Region", values = ihme_region_pal) + 
   scale_x_discrete(limit = c("inputs_mental", "inputs_maternal"),
                    labels = c(
                      
@@ -929,18 +930,18 @@ col_order <- c(
   "val_percent_GBD 2019",                            
   "lower_percent_GBD 2019",  
   "upper_percent_GBD 2019",                           
-  "val_number_Revised - 2016 reallocation method",   
-  "lower_number_Revised - 2016 reallocation method",  
-  "upper_number_Revised - 2016 reallocation method",  
-  "val_percent_Revised - 2016 reallocation method",  
-  "lower_percent_Revised - 2016 reallocation method", 
-  "upper_percent_Revised - 2016 reallocation method", 
-  "val_number_Revised - Composite method",           
-  "lower_number_Revised - Composite method",          
-  "upper_number_Revised - Composite method",          
-  "val_percent_Revised - Composite method",          
-  "lower_percent_Revised - Composite method",  
-  "upper_percent_Revised - Composite method")
+  "val_number_2016 reallocation method",   
+  "lower_number_2016 reallocation method",  
+  "upper_number_2016 reallocation method",  
+  "val_percent_2016 reallocation method",  
+  "lower_percent_2016 reallocation method", 
+  "upper_percent_2016 reallocation method", 
+  "val_number_Composite method",           
+  "lower_number_Composite method",          
+  "upper_number_Composite method",          
+  "val_percent_Composite method",          
+  "lower_percent_Composite method",  
+  "upper_percent_Composite method")
 
 data_table1 <- data_table1[, col_order]
 rm(col_order)
@@ -990,7 +991,7 @@ write.csv(appendix_table_t, file = "results/table_appendix.csv")
 abstract1 <- data_table1 %>% 
   filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
   filter(location_name =="Global") %>% 
-  select("val_number_Revised - Composite method") %>% 
+  select("val_number_Composite method") %>% 
   unique()
 abstract1 <- as.numeric(abstract1)
 abstract1 <- round(abstract1, 0)
@@ -998,7 +999,7 @@ abstract1 <- round(abstract1, 0)
 abstract2 <- data_table1 %>% 
   filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
   filter(location_name =="Global") %>% 
-  select("val_percent_Revised - Composite method") %>% 
+  select("val_percent_Composite method") %>% 
   unique()
 abstract2 <- as.numeric(abstract2)
 abstract2 <- floor(abstract2)
@@ -1020,7 +1021,7 @@ abstract_sentence1 <- paste0("Using an estimation approach that accounts for pre
        "three-fold increase compared to conventional estimates.")
 
 abstract4 <- table2 %>% 
-  filter(estimate=="Revised - Composite method") %>% 
+  filter(estimate=="Composite method") %>% 
   filter(numeric_name =="val") %>% 
   select("cost_who1") %>% 
   unique()
@@ -1076,7 +1077,7 @@ results2 <- round(results2,0)
 results3 <- data_table1 %>% 
   filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
   filter(location_name =="Global") %>% 
-  select("val_percent_Revised - 2016 reallocation method") %>% 
+  select("val_percent_2016 reallocation method") %>% 
   unique()
 results3 <- as.numeric(results3)
 results3 <- floor(results3)
@@ -1084,7 +1085,7 @@ results3 <- floor(results3)
 results4 <- data_table1 %>% 
   filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
   filter(location_name =="Global") %>% 
-  select("val_number_Revised - 2016 reallocation method") %>% 
+  select("val_number_2016 reallocation method") %>% 
   unique()
 results4 <- as.numeric(results4)
 results4 <- floor(results4)
@@ -1092,7 +1093,7 @@ results4 <- floor(results4)
 results5 <- data_table1 %>% 
   filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
   filter(location_name =="High income") %>% 
-  select("val_number_Revised - Composite method") %>% 
+  select("val_number_Composite method") %>% 
   unique()
 results5 <- as.numeric(results5)
 results5 <- round(results5, 0)
@@ -1100,7 +1101,7 @@ results5 <- round(results5, 0)
 results6 <- data_table1 %>% 
   filter(measure_name=="DALYs (Disability-Adjusted Life Years)") %>% 
   filter(location_name =="Low income") %>% 
-  select("val_number_Revised - Composite method") %>% 
+  select("val_number_Composite method") %>% 
   unique()
 results6 <- as.numeric(results6)
 results6 <- round(results6, 0)
@@ -1123,14 +1124,14 @@ ifelse(results5/results6 > 2.4, "over twice", ifelse(results5/results6> 2, "roug
 " the burden of disease in high-income countries compared to low-income countries.")
 
 results7 <- table2 %>% 
-  filter(estimate=="Revised - Composite method") %>% 
+  filter(estimate=="Composite method") %>% 
   filter(numeric_name =="val") %>% 
   select("cost_who1") %>% 
   unique()
 results7 <- as.numeric(results7)
 
 results8 <- table2 %>% 
-  filter(estimate=="Revised - 2016 reallocation method") %>% 
+  filter(estimate=="2016 reallocation method") %>% 
   filter(numeric_name =="val") %>% 
   select("cost_who1") %>% 
   unique()
@@ -1178,7 +1179,7 @@ round((abstract1-results1)/abstract1*100),
 
 
 discussion1 <- table2 %>% 
-  filter(estimate=="Revised - Composite method") %>% 
+  filter(estimate=="Composite method") %>% 
   filter(numeric_name =="lower") %>% 
   select("cost_who1") %>% 
   unique()
@@ -1186,7 +1187,7 @@ discussion1 <- as.numeric(discussion1)
 
 
 discussion2 <- table2 %>% 
-  filter(estimate=="Revised - Composite method") %>% 
+  filter(estimate=="Composite method") %>% 
   filter(numeric_name =="upper") %>% 
   select("cost_who1") %>% 
   unique()
