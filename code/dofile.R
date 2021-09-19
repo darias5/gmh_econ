@@ -560,7 +560,7 @@ for(k in metric){
         facet_grid(~estimate) 
       
       
-      ggsave(filename = paste0("fig", n,"_",m,".png"), plot = last_plot(), 
+      ggsave(filename = paste0("fig", n,"_",m,".jpg"), plot = last_plot(), 
              path = resultspath,
              width = 10,
              height = 4)
@@ -597,7 +597,7 @@ for (l in monetaryvalue) {
                            oob = squish) +
       facet_grid(~estimate)
     
-    ggsave(filename = paste0("fig", n,"_",m,".png"), plot = last_plot(), 
+    ggsave(filename = paste0("fig", n,"_",m,".jpg"), plot = last_plot(), 
            path = resultspath,
            width = 10,
            height = 4)
@@ -650,7 +650,7 @@ for(k in metric){
           coord_sf(ndiscr = F) + 
           facet_grid(~estimate) 
         
-        ggsave(filename = paste0("fig", n,"_",i,"_",m,".png"), plot = last_plot(), 
+        ggsave(filename = paste0("fig", n,"_",i,"_",m,".jpg"), plot = last_plot(), 
                path = resultspath,
                width = 10,
                height = 4)
@@ -689,7 +689,7 @@ for (l in monetaryvalue) {
                              oob = squish) +
         facet_grid(~estimate)
       
-      ggsave(filename = paste0("fig", n,"_",i,"_",m,".png"), plot = last_plot(), 
+      ggsave(filename = paste0("fig", n,"_",i,"_",m,".jpg"), plot = last_plot(), 
              path = resultspath,
              width = 10,
              height = 4)
@@ -764,7 +764,7 @@ for(j in measures){
         geom_text(aes(label=round(get(paste0(i,"_percent",ifelse(m =="diff", "_diff",""))),1)), vjust=1.6, color="black", size=ifelse(i =="who_region",2.5, 1.5)) +
         scale_fill_manual(name = "Region", values = get(paste0(i,"_pal")))
       
-      ggsave(filename = paste0("fig", n,"_",i,"_",m,".png"), plot = last_plot(), 
+      ggsave(filename = paste0("fig", n,"_",i,"_",m,".jpg"), plot = last_plot(), 
              path = resultspath,
              width = 10,
              height = 4)
@@ -805,7 +805,7 @@ for (l in monetaryvalue) {
         geom_text(aes(label=round(get(paste0(i,"_",l,ifelse(m =="diff", "_diff","")))/ get(paste0(i,"_","gdp")) * 100,1)), vjust=1.6, color="black", size=ifelse(i =="who_region",2.5, 1.5)) +
         scale_fill_manual(name = "Region", values = get(paste0(i,"_pal")))
       
-      ggsave(filename = paste0("fig", n,"_",i,"_",m,".png"), plot = last_plot(), 
+      ggsave(filename = paste0("fig", n,"_",i,"_",m,".jpg"), plot = last_plot(), 
              path = resultspath,
              width = 10,
              height = 4)
@@ -867,7 +867,7 @@ combo_chart_4_gbdinputs_ihme_region <- ggarrange(chart_4_gbdinputs_ihme_region_s
                                                  ncol = 2, nrow = 1)
 
 
-ggsave(filename = "fig15_ihme_region.png", plot = last_plot(), 
+ggsave(filename = "fig15_ihme_region.jpg", plot = last_plot(), 
        path = resultspath,
        width = 13,
        height = 8)
