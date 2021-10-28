@@ -1,8 +1,7 @@
 ##################################################################
 #
-# ESTIMATING THE GLOBAL ECONOMIC BURDEN OF MENTAL ILLNESS 
-# Daniel Arias, PhD Student, Population Health Sciences
-# August 29, 2021
+# Quantifying the global burden of mental illness and its economic value
+# October 28, 2021
 #
 ##################################################################
 
@@ -1158,7 +1157,7 @@ results_sentence1 <- paste0(
 results1,
 " million DALYs were attributed to mental disorders, or roughly ",
 results2,
-"% of the global burden. After including neurological disorders, chronic pain, suicide, and self-harm, the share of morbidity and mortality due to mental disorders rose to ",
+"% of the global burden. After including alcohol and drug use, neurological disorders, chronic pain, suicide, and self-harm, the share of morbidity and mortality due to mental disorders rose to ",
 results3,
 "% of global DALYs (approximately ",
 results4,
@@ -1201,7 +1200,7 @@ floor((results7 - results9)*10)/10,
 " trillion USD larger than that reached from the unadjusted GBD 2019 estimates.")
 
 results_sentence3 <- paste0(
-"Using GDP per capita as the value per DALY, the losses due to mental disorders account for between ",
+"Under the relative, GDP-per-capita values, the economic burden due to mental disorders account for between ",
 abstract8,
        "% of gross domestic product in ",
        abstract7,
