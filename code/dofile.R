@@ -91,13 +91,17 @@ rm(ihme_crosswalk, income_level, data_number, data_rate)
 
 # Naming relevant IHME cause IDs
 mental_disorder_cause_id <- 558
-dementia_cause_id1 <- 543
-dementia_cause_id2 <- 544
-epilepsy_cause_id <- 545
+dementia_cause_id1 <- 543 # Alzheimer's disease and other dementias
+dementia_cause_id2 <- 544 # Parkinson's disease
+epilepsy_cause_id <- 545 # Idiopathic epilepsy
 migraine_cause_id <- 547
 tension_type_headache_cause_id <- 548
-self_harm <- 718
-musculoskeletal_cause_id <- 626
+self_harm_cause_id <- 718
+alcohol_use_disorders_cause_id <- 560
+drug_use_disorders_cause_id <- 561
+low_back_pain_cause_id <- 630
+neck_pain_cause_id <- 631
+other_musculoskeletal_cause_id <- 639
 all_cause_id <- 294
 
 
@@ -120,28 +124,54 @@ cause_id <- c(mental_disorder_cause_id,
               epilepsy_cause_id,
               migraine_cause_id,
               tension_type_headache_cause_id,
-              self_harm,
-              musculoskeletal_cause_id,
+              self_harm_cause_id,
+              alcohol_use_disorders_cause_id,
+              drug_use_disorders_cause_id,
+              low_back_pain_cause_id,
+              neck_pain_cause_id,
+              other_musculoskeletal_cause_id,
               mental_disorder_cause_id,
               dementia_cause_id1,
               dementia_cause_id2,
               epilepsy_cause_id,
               migraine_cause_id,
               tension_type_headache_cause_id,
-              self_harm,
-              musculoskeletal_cause_id,
+              self_harm_cause_id,
+              alcohol_use_disorders_cause_id,
+              drug_use_disorders_cause_id,
+              low_back_pain_cause_id,
+              neck_pain_cause_id,
+              other_musculoskeletal_cause_id,
               mental_disorder_cause_id,
               dementia_cause_id1,
               dementia_cause_id2,
               epilepsy_cause_id,
               migraine_cause_id,
               tension_type_headache_cause_id,
-              self_harm,
-              musculoskeletal_cause_id)
+              self_harm_cause_id,
+              alcohol_use_disorders_cause_id,
+              drug_use_disorders_cause_id,
+              low_back_pain_cause_id,
+              neck_pain_cause_id,
+              other_musculoskeletal_cause_id)
 
-numeric_name <- c("val", "val", "val", "val", "val", "val", "val", "val",
-                  "lower","lower","lower","lower","lower","lower","lower","lower",
-                  "upper","upper","upper","upper","upper","upper","upper","upper")
+numeric_name <- c("val", "val", "val", "val", "val","val", "val", "val", "val", "val", "val","val",
+                  "lower","lower","lower","lower","lower","lower","lower","lower","lower","lower","lower","lower",
+                  "upper","upper","upper","upper","upper","upper","upper","upper","upper","upper","upper","upper")
+
+
+# Allocations of low back pain, neck pain, and other musculoskeletal disorders is based on
+# the following section of Vigo et al. 2016
+
+# "Considering that a fraction of low back, neck pain,
+# and 50% of other musculoskeletal pain potentially
+# corresponds to chronic pain syndromes, and for the
+# purposes of producing a more accurate estimation and
+# stimulating debate, we assume given the limited data
+# that one third (rather than zero percent, as it is now) of
+# the disease burden of these pain syndromes is
+# potentially attributable to mental disorders and explore
+#  the effect on mental illness burden calculations..."
 
 rev_2016_weights <- c(1,
                       1,
@@ -150,7 +180,11 @@ rev_2016_weights <- c(1,
                       1,
                       1,
                       1,
-                      1/3, # Vigo et. al allocates 1/3rd of musculoskeletal burden to mental disorders
+                      1,
+                      1,
+                      2/6, # Allocating 1/3
+                      2/6,
+                      1/2*2/6, 
                       
                       1,
                       1,
@@ -159,7 +193,11 @@ rev_2016_weights <- c(1,
                       1,
                       1,
                       1,
-                      0, # Allocating none of musculoskeletal 
+                      1,
+                      1,
+                      1/6, # Allocating 1/6
+                      1/6,
+                      1/2*1/6, 
                       
                       1,
                       1,
@@ -168,7 +206,11 @@ rev_2016_weights <- c(1,
                       1,
                       1,
                       1,
-                      2/3) # Allocating 2/3rds of musculoskeletal 
+                      1,
+                      1,
+                      3/6, # Allocating 1/2 
+                      3/6,
+                      1/2*3/6) 
 
 
 rev_2016_weights_df <- data.frame(cause_id,numeric_name, rev_2016_weights)
@@ -293,12 +335,16 @@ rm(data_rev_composite,
    epilepsy_cause_id,
    migraine_cause_id,
    tension_type_headache_cause_id,
-   self_harm,
-   musculoskeletal_cause_id,
+   self_harm_cause_id,
+   other_musculoskeletal_cause_id,
    all_cause_id,
    cause_id,
    numeric_name,
    original_weights,
+   alcohol_use_disorders_cause_id,
+   drug_use_disorders_cause_id,
+   neck_pain_cause_id,
+   low_back_pain_cause_id,
    relative_risk)
 
 data_rev$estimate_id <- ifelse(data_rev$estimate == "Composite method", 4, 
