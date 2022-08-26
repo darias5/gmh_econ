@@ -1,7 +1,7 @@
 ##################################################################
 #
-# Quantifying the global burden of mental illness and its economic value
-# March 24, 2022
+# Quantifying the global burden of mental disorders and their economic value
+# Last edited: August 26, 2022
 #
 ##################################################################
 
@@ -718,6 +718,7 @@ for (m in comparison) {
 ###############################
 ##        REGIONAL           ##
 ###############################
+sf_use_s2(FALSE)
 
 n = 1
 
@@ -731,8 +732,9 @@ for(k in metric){
           filter(estimate_id %in%  c(ifelse(m =="diff","",1), 2,4)) %>% 
           ggplot() +
           geom_sf(mapping = aes(fill = get(paste0(i,"_",k,ifelse(m =="diff", "_diff","")))), color = "white", size = 0.01) +
-          geom_sf(data = . %>%   group_by(get(i)) %>% st_set_precision(1e4) %>%
-                    summarize(geometry = st_combine(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+          geom_sf(data = . %>%   group_by(get(i)) %>% 
+                    st_set_precision(1e4) %>%
+                    summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
           theme(panel.grid.major = element_blank(), 
                 panel.background = element_blank(),
                 axis.title = element_blank(), 
@@ -767,6 +769,7 @@ for(k in metric){
                width = 10,
                height = 4)
         
+        
       }
     }
     
@@ -774,6 +777,183 @@ for(k in metric){
     
   }
 }
+
+
+# Figure 1
+
+j = 1
+i = "ihme_region"
+k = "rate_per_100k"
+m = "abs"
+
+death <- data_rev_map %>% 
+  filter(measure_id == j) %>% 
+  filter(estimate_id %in%  c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = get(paste0(i,"_",k,ifelse(m =="diff", "_diff","")))), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(get(i)) %>% 
+            st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank())  + 
+  labs(
+    subtitle=paste0(
+    ifelse(m =="diff" && j==1 && k == "rate_per_100k", "Difference in number of deaths due to mental disorders per 100,000 capita, relative to GBD 2019",
+           ifelse(m =="diff" && j==2 && k == "rate_per_100k", "Difference in number of DALYs due to mental disorders per 100,000 capita, relative to GBD 2019",
+                  ifelse(m =="diff" && j==3 && k == "rate_per_100k", "Difference in number of YLDs due to mental disorders per 100,000 capita, relative to GBD 2019",
+                         ifelse(m =="diff" && j==4 && k == "rate_per_100k", "Difference in number of YLLs due to mental disorders per 100,000 capita, relative to GBD 2019",
+                                ifelse(m =="diff" && j==1 && k != "rate_per_100k", "Percentage point difference in percent of deaths due to mental disorders, relative to GBD 2019",
+                                       ifelse(m =="diff" && j==2 && k != "rate_per_100k", "Percentage point difference in percent of DALYs due to mental disorders, relative to GBD 2019",
+                                              ifelse(m =="diff" && j==3 && k != "rate_per_100k", "Percentage point difference in percent of YLDs due to mental disorders, relative to GBD 2019",
+                                                     ifelse(m =="diff" && j==4 && k != "rate_per_100k", "Percentage point difference in percent of YLLs due to mental disorders, relative to GBD 2019",
+                                                            paste0(ifelse(j==1,"Deaths",
+                                                                          ifelse(j==2, "DALYs",
+                                                                                 ifelse(j==3, "YLDs" ,"YLLs")))," due to mental disorders", paste0(ifelse(k=="rate_per_100k"," per 100,000 capita", ", % of total")))))))))))),
+    # subtitle="2019",
+    # caption=caption,
+    fill=
+      ifelse(j == 1,ifelse(k == "rate_per_100k", "Deaths", "% of deaths"),
+             ifelse(j == 2, ifelse(k == "rate_per_100k", "DALYs", "% of DALYs"),
+                    ifelse(j == 3, ifelse(k == "rate_per_100k", "YLDs", "% of YLDs"), 
+                           ifelse(k == "rate_per_100k", "YLLs", "% of YLLs"))))) +
+  scale_fill_distiller(palette = ifelse(k == "rate_per_100k","RdYlBu", "YlGn"),
+                       direction = ifelse(k == "rate_per_100k",-1, 1)) +
+  coord_sf(ndiscr = F) + 
+  facet_grid(~estimate_newlab) 
+
+j = 2 
+dalys <- data_rev_map %>% 
+  filter(measure_id == j) %>% 
+  filter(estimate_id %in%  c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = get(paste0(i,"_",k,ifelse(m =="diff", "_diff","")))), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(get(i)) %>% 
+            st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank())  + 
+  labs(
+    subtitle=paste0(
+      ifelse(m =="diff" && j==1 && k == "rate_per_100k", "Difference in number of deaths due to mental disorders per 100,000 capita, relative to GBD 2019",
+             ifelse(m =="diff" && j==2 && k == "rate_per_100k", "Difference in number of DALYs due to mental disorders per 100,000 capita, relative to GBD 2019",
+                    ifelse(m =="diff" && j==3 && k == "rate_per_100k", "Difference in number of YLDs due to mental disorders per 100,000 capita, relative to GBD 2019",
+                           ifelse(m =="diff" && j==4 && k == "rate_per_100k", "Difference in number of YLLs due to mental disorders per 100,000 capita, relative to GBD 2019",
+                                  ifelse(m =="diff" && j==1 && k != "rate_per_100k", "Percentage point difference in percent of deaths due to mental disorders, relative to GBD 2019",
+                                         ifelse(m =="diff" && j==2 && k != "rate_per_100k", "Percentage point difference in percent of DALYs due to mental disorders, relative to GBD 2019",
+                                                ifelse(m =="diff" && j==3 && k != "rate_per_100k", "Percentage point difference in percent of YLDs due to mental disorders, relative to GBD 2019",
+                                                       ifelse(m =="diff" && j==4 && k != "rate_per_100k", "Percentage point difference in percent of YLLs due to mental disorders, relative to GBD 2019",
+                                                              paste0(ifelse(j==1,"Deaths",
+                                                                            ifelse(j==2, "DALYs",
+                                                                                   ifelse(j==3, "YLDs" ,"YLLs")))," due to mental disorders", paste0(ifelse(k=="rate_per_100k"," per 100,000 capita", ", % of total")))))))))))),
+    # subtitle="2019",
+    # caption=caption,
+    fill=
+      ifelse(j == 1,ifelse(k == "rate_per_100k", "Deaths", "% of deaths"),
+             ifelse(j == 2, ifelse(k == "rate_per_100k", "DALYs", "% of DALYs"),
+                    ifelse(j == 3, ifelse(k == "rate_per_100k", "YLDs", "% of YLDs"), 
+                           ifelse(k == "rate_per_100k", "YLLs", "% of YLLs"))))) +
+  scale_fill_distiller(palette = ifelse(k == "rate_per_100k","RdYlBu", "YlGn"),
+                       direction = ifelse(k == "rate_per_100k",-1, 1)) +
+  coord_sf(ndiscr = F) + 
+  facet_grid(~estimate_newlab) 
+
+j = 3
+
+ylds <- data_rev_map %>% 
+  filter(measure_id == j) %>% 
+  filter(estimate_id %in%  c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = get(paste0(i,"_",k,ifelse(m =="diff", "_diff","")))), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(get(i)) %>% 
+            st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank())  + 
+  labs(
+    subtitle=paste0(
+      ifelse(m =="diff" && j==1 && k == "rate_per_100k", "Difference in number of deaths due to mental disorders per 100,000 capita, relative to GBD 2019",
+             ifelse(m =="diff" && j==2 && k == "rate_per_100k", "Difference in number of DALYs due to mental disorders per 100,000 capita, relative to GBD 2019",
+                    ifelse(m =="diff" && j==3 && k == "rate_per_100k", "Difference in number of YLDs due to mental disorders per 100,000 capita, relative to GBD 2019",
+                           ifelse(m =="diff" && j==4 && k == "rate_per_100k", "Difference in number of YLLs due to mental disorders per 100,000 capita, relative to GBD 2019",
+                                  ifelse(m =="diff" && j==1 && k != "rate_per_100k", "Percentage point difference in percent of deaths due to mental disorders, relative to GBD 2019",
+                                         ifelse(m =="diff" && j==2 && k != "rate_per_100k", "Percentage point difference in percent of DALYs due to mental disorders, relative to GBD 2019",
+                                                ifelse(m =="diff" && j==3 && k != "rate_per_100k", "Percentage point difference in percent of YLDs due to mental disorders, relative to GBD 2019",
+                                                       ifelse(m =="diff" && j==4 && k != "rate_per_100k", "Percentage point difference in percent of YLLs due to mental disorders, relative to GBD 2019",
+                                                              paste0(ifelse(j==1,"Deaths",
+                                                                            ifelse(j==2, "DALYs",
+                                                                                   ifelse(j==3, "YLDs" ,"YLLs")))," due to mental disorders", paste0(ifelse(k=="rate_per_100k"," per 100,000 capita", ", % of total")))))))))))),
+    # subtitle="2019",
+    # caption=caption,
+    fill=
+      ifelse(j == 1,ifelse(k == "rate_per_100k", "Deaths", "% of deaths"),
+             ifelse(j == 2, ifelse(k == "rate_per_100k", "DALYs", "% of DALYs"),
+                    ifelse(j == 3, ifelse(k == "rate_per_100k", "YLDs", "% of YLDs"), 
+                           ifelse(k == "rate_per_100k", "YLLs", "% of YLLs"))))) +
+  scale_fill_distiller(palette = ifelse(k == "rate_per_100k","RdYlBu", "YlGn"),
+                       direction = ifelse(k == "rate_per_100k",-1, 1)) +
+  coord_sf(ndiscr = F) + 
+  facet_grid(~estimate_newlab) 
+
+j = 4
+
+ylls <- data_rev_map %>% 
+  filter(measure_id == j) %>% 
+  filter(estimate_id %in%  c(1,2,4)) %>% 
+  ggplot() +
+  geom_sf(mapping = aes(fill = get(paste0(i,"_",k,ifelse(m =="diff", "_diff","")))), color = "white", size = 0.01) +
+  geom_sf(data = . %>%   group_by(get(i)) %>% 
+            st_set_precision(1e4) %>%
+            summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+  theme(panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        axis.title = element_blank(), 
+        axis.text = element_blank(),
+        axis.ticks = element_blank())  + 
+  labs(
+    subtitle=paste0(
+      ifelse(m =="diff" && j==1 && k == "rate_per_100k", "Difference in number of deaths due to mental disorders per 100,000 capita, relative to GBD 2019",
+             ifelse(m =="diff" && j==2 && k == "rate_per_100k", "Difference in number of DALYs due to mental disorders per 100,000 capita, relative to GBD 2019",
+                    ifelse(m =="diff" && j==3 && k == "rate_per_100k", "Difference in number of YLDs due to mental disorders per 100,000 capita, relative to GBD 2019",
+                           ifelse(m =="diff" && j==4 && k == "rate_per_100k", "Difference in number of YLLs due to mental disorders per 100,000 capita, relative to GBD 2019",
+                                  ifelse(m =="diff" && j==1 && k != "rate_per_100k", "Percentage point difference in percent of deaths due to mental disorders, relative to GBD 2019",
+                                         ifelse(m =="diff" && j==2 && k != "rate_per_100k", "Percentage point difference in percent of DALYs due to mental disorders, relative to GBD 2019",
+                                                ifelse(m =="diff" && j==3 && k != "rate_per_100k", "Percentage point difference in percent of YLDs due to mental disorders, relative to GBD 2019",
+                                                       ifelse(m =="diff" && j==4 && k != "rate_per_100k", "Percentage point difference in percent of YLLs due to mental disorders, relative to GBD 2019",
+                                                              paste0(ifelse(j==1,"Deaths",
+                                                                            ifelse(j==2, "DALYs",
+                                                                                   ifelse(j==3, "YLDs" ,"YLLs")))," due to mental disorders", paste0(ifelse(k=="rate_per_100k"," per 100,000 capita", ", % of total")))))))))))),
+    # subtitle="2019",
+    # caption=caption,
+    fill=
+      ifelse(j == 1,ifelse(k == "rate_per_100k", "Deaths", "% of deaths"),
+             ifelse(j == 2, ifelse(k == "rate_per_100k", "DALYs", "% of DALYs"),
+                    ifelse(j == 3, ifelse(k == "rate_per_100k", "YLDs", "% of YLDs"), 
+                           ifelse(k == "rate_per_100k", "YLLs", "% of YLLs"))))) +
+  scale_fill_distiller(palette = ifelse(k == "rate_per_100k","RdYlBu", "YlGn"),
+                       direction = ifelse(k == "rate_per_100k",-1, 1)) +
+  coord_sf(ndiscr = F) + 
+  facet_grid(~estimate_newlab) 
+
+
+ggarrange(dalys, ylds, ylls, death , 
+          # labels = c("A", "B", "C", "D"),
+          ncol = 1, nrow = 4)
+
+ggsave(filename = paste0("Figure_1.jpg"), plot = last_plot(), 
+       path = resultspath,
+       width = 10,
+       height = 8.5)
+
+rm(dalys, death, ylds, ylls)
 
 for (m in comparison) {
   for (l in monetaryvalue) {
@@ -785,7 +965,7 @@ for (m in comparison) {
         ggplot() +
         geom_sf(mapping = aes(fill = get(paste0(i,"_",l, ifelse(m =="diff", "_diff","")))/ get(paste0(i,"_","gdp")) * 100), color = "white", size = 0.01) +
         geom_sf(data = . %>%   group_by(get(i)) %>% st_set_precision(1e4) %>%
-                  summarize(geometry = st_combine(geometry)), fill = "transparent", color = 'black', size = 0.01) +
+                  summarize(geometry = st_union(geometry)), fill = "transparent", color = 'black', size = 0.01) +
         theme(panel.grid.major = element_blank(), 
               panel.background = element_blank(),
               axis.title = element_blank(), 
@@ -806,6 +986,8 @@ for (m in comparison) {
              width = 10,
              height = 4)
       
+
+      
     }
     
     n <- n + 1
@@ -818,6 +1000,8 @@ for (m in comparison) {
 }
 
 rm(data_rev_map)
+
+
 
 ####################################
 ##       REGIONAL CHARTS          ##
@@ -934,10 +1118,17 @@ for (l in monetaryvalue) {
              path = resultspath,
              width = 10,
              height = 6)
+      
+      ifelse(l == "cost_who1" & m == "abs" & i == "ihme_region", 
+             ggsave(filename = paste0("Figure_2.jpg"), plot = last_plot(), 
+                    path = resultspath,
+                    width = 10,
+                    height = 6), print("done"))
     }
   }
   n <- n + 1
 }
+
 
 
 ######################
